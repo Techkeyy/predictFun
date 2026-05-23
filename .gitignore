@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+frontend/.next/
+frontend/out/
+
+# Environment files — NEVER commit these
+.env
+frontend/.env.local
+frontend/.env
+
+# Hardhat
+cache/
+artifacts/
+
+# OS
+.DS_Store
+Thumbs.db
