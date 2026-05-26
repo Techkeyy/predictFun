@@ -92,7 +92,7 @@ export default function PortfolioPage() {
 
     return {
       color: isExpired ? "var(--muted)" : "var(--green)",
-      background: isExpired ? "var(--surface2)" : "rgba(0,194,120,0.08)",
+      background: isExpired ? "var(--surface2)" : "rgba(59,130,246,0.08)",
     };
   };
 

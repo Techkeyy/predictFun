@@ -6,7 +6,6 @@ import { injected } from "wagmi/connectors";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatEther } from "viem";
-import { switchToXLayerTestnet } from "../lib/switchNetwork";
 import { NetworkModal } from "./NetworkModal";
 
 const TICKER_ITEMS = [
@@ -43,6 +42,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [disconnectHover, setDisconnectHover] = useState(false);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
+  const [networkHover, setNetworkHover] = useState(false);
 
   const isCorrectNetwork = chainId === 1952;
   const activeCategory = searchParams.get("cat") || "all";
@@ -126,41 +126,73 @@ export function Navbar() {
   const formattedBalance = balance ? parseFloat(formatEther(balance.value)).toFixed(3) : "0.000";
   const short = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
 
+  const handleNetworkClick = async () => {
+    try {
+      await (window as any).ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x790" }],
+      });
+    } catch (err: any) {
+      if (err.code === 4902) {
+        await (window as any).ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0x790",
+            chainName: "X Layer Testnet",
+            nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
+            rpcUrls: ["https://testrpc.xlayer.tech/terigon"],
+            blockExplorerUrls: ["https://www.okx.com/web3/explorer/xlayer-test"],
+          }],
+        });
+      }
+    }
+  };
+
   const networkChip = (
-    <div style={{
+    <button type="button" title="Click to switch to X Layer Testnet" onClick={handleNetworkClick} onMouseEnter={() => setNetworkHover(true)} onMouseLeave={() => setNetworkHover(false)} style={{
       display: "flex",
       alignItems: "center",
       gap: "6px",
       padding: "4px 10px",
       borderRadius: "6px",
-      background: "rgba(0,194,120,0.08)",
-      border: "1px solid rgba(0,194,120,0.2)",
+      background: "rgba(59,130,246,0.08)",
+      border: `1px solid ${networkHover ? "rgba(59,130,246,0.25)" : "rgba(59,130,246,0.2)"}`,
       fontSize: "11px",
       fontWeight: 600,
       color: "var(--green)",
       whiteSpace: "nowrap",
+      cursor: "pointer",
+      transition: "border-color 0.15s ease, background 0.15s ease",
+      appearance: "none",
     }}>
       <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--green)", display: "inline-block", flexShrink: 0 }} />
       X Layer Testnet
-    </div>
+    </button>
   );
+
+  const tickerBarStyle = {
+    background: "#3b82f6",
+    color: "#ffffff",
+    fontSize: "10px",
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    overflow: "hidden",
+    height: "26px",
+    display: "flex",
+    alignItems: "center",
+  } as const;
+
+  const tickerInnerStyle = {
+    display: "flex",
+    whiteSpace: "nowrap",
+  } as const;
 
   if (!mounted) return null;
 
   return (
     <>
-      <div style={{
-        background: "var(--green)",
-        color: "#000",
-        fontSize: "10px",
-        fontWeight: 700,
-        letterSpacing: "0.08em",
-        overflow: "hidden",
-        height: "26px",
-        display: "flex",
-        alignItems: "center",
-      }}>
-        <div className="marquee-inner" style={{ display: "flex", whiteSpace: "nowrap" }}>
+      <div className="ticker-bar" style={tickerBarStyle}>
+        <div className="marquee-inner" style={tickerInnerStyle}>
           {[0, 1].map((copy) => (
             <span key={copy} style={{ display: "flex", alignItems: "center", gap: "48px", paddingRight: "48px" }}>
               {TICKER_ITEMS.map((item, j) => (
@@ -207,7 +239,7 @@ export function Navbar() {
                 background: "var(--green-dim)",
                 color: "var(--green)",
                 letterSpacing: "0.06em",
-                border: "1px solid rgba(0,194,120,0.2)",
+                border: "1px solid rgba(59,130,246,0.2)",
               }}>
                 X LAYER
               </span>
@@ -319,8 +351,8 @@ export function Navbar() {
                     style={{
                       padding: "4px 10px",
                       borderRadius: "6px",
-                      background: "rgba(0,194,120,0.08)",
-                      border: "1px solid rgba(0,194,120,0.2)",
+                      background: "rgba(59,130,246,0.08)",
+                      border: "1px solid rgba(59,130,246,0.2)",
                       color: "var(--green)",
                       fontSize: "12px",
                       fontWeight: 600,
@@ -352,7 +384,7 @@ export function Navbar() {
                       justifyContent: "center",
                       fontSize: "9px",
                       fontWeight: 700,
-                      color: "#000",
+                      color: "#ffffff",
                       flexShrink: 0,
                     }}>
                       {address ? address.slice(2, 4).toUpperCase() : ""}
@@ -474,8 +506,8 @@ export function Navbar() {
                     style={{
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      background: "rgba(0,194,120,0.08)",
-                      border: "1px solid rgba(0,194,120,0.2)",
+                      background: "rgba(59,130,246,0.08)",
+                      border: "1px solid rgba(59,130,246,0.2)",
                       color: "var(--green)",
                       fontSize: "13px",
                       fontWeight: 700,

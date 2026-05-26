@@ -9,7 +9,7 @@ interface NetworkModalProps {
 
 const HEXAGON_LOGO = (
   <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 2.5L20 7v10l-8 4.5-8-4.5V7l8-4.5Z" fill="rgba(0,194,120,0.14)" stroke="var(--green)" strokeWidth="1.5" />
+    <path d="M12 2.5L20 7v10l-8 4.5-8-4.5V7l8-4.5Z" fill="rgba(59,130,246,0.14)" stroke="var(--green)" strokeWidth="1.5" />
     <path d="M9 8.5h4.3c1.6 0 2.7.8 2.7 2.2 0 1-.6 1.7-1.5 2 1 .2 1.7 1 1.7 2.1 0 1.6-1.2 2.7-3.2 2.7H9V8.5Zm3.8 3.7c.7 0 1.1-.3 1.1-.9s-.4-.9-1.1-.9h-1.8v1.8h1.8Zm.2 4.1c.8 0 1.2-.4 1.2-1s-.4-1-1.2-1H11v2h2Z" fill="var(--green)" />
   </svg>
 );

@@ -333,7 +333,7 @@ export function CallCard({
           padding: "8px 12px",
           borderRadius: "8px",
           background: "var(--green-dim)",
-          border: "1px solid rgba(0,194,120,0.3)",
+          border: "1px solid rgba(59,130,246,0.3)",
           fontSize: "12px",
           color: "var(--green)",
           fontWeight: 600,
