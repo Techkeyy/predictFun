@@ -2,9 +2,10 @@
 
 import { useParams } from "next/navigation";
 import { useAccount, usePublicClient } from "wagmi";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { formatEther } from "viem";
+import html2canvas from "html2canvas";
 import { PUNDITCARD_ABI, PUNDITCARD_ADDRESS, THECALL_ABI, THECALL_ADDRESS } from "../../../lib/contracts";
 
 interface PunditStats {
@@ -30,6 +31,7 @@ export default function PunditPage() {
   const rawAddress = params.address as string;
   const { address: connectedAddress } = useAccount();
   const publicClient = usePublicClient();
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const [stats, setStats] = useState<PunditStats>({
     wins: BigInt(0),
     losses: BigInt(0),
@@ -143,6 +145,20 @@ export default function PunditPage() {
   }, [wins]);
 
   const formatOKB = (wei: bigint) => formatEther(wei);
+  const downloadCard = async () => {
+    if (!cardRef.current) return;
+
+    const canvas = await html2canvas(cardRef.current, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+    });
+
+    const link = document.createElement("a");
+    link.download = `predictfun-pundit-${shortAddress.replace(/\.\.\./, "-")}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
 
   if (loading) {
     return (
@@ -154,7 +170,7 @@ export default function PunditPage() {
 
   return (
     <div style={{ maxWidth: "700px", margin: "40px auto", padding: "0 24px" }}>
-      <div style={{
+      <div ref={cardRef} style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
         borderRadius: "16px",
@@ -234,6 +250,25 @@ export default function PunditPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
+        <button
+          type="button"
+          onClick={downloadCard}
+          style={{
+            padding: "10px 16px",
+            borderRadius: "999px",
+            border: "1px solid var(--border)",
+            background: "var(--surface2)",
+            color: "var(--text)",
+            fontSize: "13px",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          Download Card
+        </button>
       </div>
 
       <div style={{ marginTop: "24px" }}>

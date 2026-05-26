@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Bookmark } from "lucide-react";
 import { useAccount, useWriteContract } from "wagmi";
-import { parseEther, formatEther } from "viem";
+import { parseEther } from "viem";
 import { THECALL_ADDRESS, THECALL_ABI } from "../lib/contracts";
 
 interface CallCardProps {
@@ -28,21 +30,45 @@ export function CallCard({
   settled,
   callerWon,
 }: CallCardProps) {
+  const router = useRouter();
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const [amount, setAmount] = useState("0.01");
   const [txStatus, setTxStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
 
-  const totalPool = stake + backerPool + faderPool;
-  const backerPct = totalPool > BigInt(0) ? Math.round(Number((backerPool + stake) * BigInt(100)) / Number(totalPool)) : 100;
-  const faderPct = 100 - backerPct;
   const now = Math.floor(Date.now() / 1000);
   const deadlineNum = Number(deadline);
-  const daysLeft = Math.max(0, Math.ceil((deadlineNum - now) / 86400));
   const isExpired = now > deadlineNum;
+
+  if (isExpired && !settled) {
+    return null;
+  }
+
+  const totalPool = stake + backerPool + faderPool;
+  const backerPct = totalPool > BigInt(0) ? Math.round((Number(backerPool + stake) / Number(totalPool)) * 100) : 100;
+  const faderPct = 100 - backerPct;
+  const daysLeft = Math.max(0, Math.ceil((deadlineNum - now) / 86400));
 
   const shortAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   const formatOKB = (wei: bigint) => (Number(wei) / 1e18).toFixed(3);
+  const totalVolume = stake + backerPool + faderPool;
+
+  const getCategoryIcon = () => {
+    const lower = claim.toLowerCase();
+    if (lower.includes("golden boot") || lower.includes("top scorer") || lower.includes("goal scorer") || lower.includes("most goals")) return "👟";
+    if (lower.includes("card") || lower.includes("yellow") || lower.includes("red")) return "🟨";
+    if (lower.includes("africa") || lower.includes("african") || lower.includes("ghana") || lower.includes("nigeria") || lower.includes("morocco") || lower.includes("senegal") || lower.includes("egypt") || lower.includes("tunisia") || lower.includes("cameroon") || lower.includes("ivory coast")) return "🌍";
+    if (lower.includes("winner") || lower.includes("champion") || lower.includes("trophy") || lower.includes("title") || lower.includes("cup")) return "🏆";
+    return "⚽";
+  };
+
+  const openMarket = !settled && !isExpired;
+  const backingValue = backerPool + stake;
+  const fadingValue = faderPool;
+
+  const goToPundit = () => {
+    router.push(`/pundit/${caller}`);
+  };
 
   const clearStatus = () => {
     window.setTimeout(() => setTxStatus("idle"), 3000);
@@ -98,78 +124,118 @@ export function CallCard({
 
   const isPending = txStatus === "pending";
 
+  const rowButtonBase = {
+    minWidth: "84px",
+    padding: "10px 14px",
+    borderRadius: "999px",
+    border: "none",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: isPending ? "not-allowed" : "pointer",
+    letterSpacing: "0.02em",
+  };
+
   return (
     <div style={{
       background: "var(--surface)",
       border: "1px solid var(--border)",
-      borderRadius: "12px",
-      padding: "20px",
+      borderRadius: "18px",
+      padding: "16px",
       display: "flex",
       flexDirection: "column",
       gap: "14px",
+      boxShadow: "0 12px 28px rgba(0,0,0,0.08)",
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{
-            width: "26px", height: "26px", borderRadius: "50%",
-            background: "var(--green)", display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: "9px", fontWeight: 700, color: "#000",
-          }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", minWidth: 0 }}>
+          <button
+            type="button"
+            onClick={goToPundit}
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "999px",
+              border: "1px solid var(--border)",
+              background: "var(--surface2)",
+              color: "var(--text)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "12px",
+              fontWeight: 800,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
             {caller.slice(2, 4).toUpperCase()}
+          </button>
+
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+              <span style={{ fontSize: "20px" }}>{getCategoryIcon()}</span>
+              <button
+                type="button"
+                onClick={goToPundit}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  textAlign: "left",
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  lineHeight: 1.25,
+                  cursor: "pointer",
+                }}
+              >
+                {claim}
+              </button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              {openMarket ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 700, color: "var(--green)" }}>
+                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "var(--green)" }} />
+                  LIVE
+                </span>
+              ) : (
+                <span style={{ fontSize: "11px", fontWeight: 700, color: callerWon ? "var(--green)" : "var(--red)" }}>
+                  {settled ? (callerWon ? "Settled winner" : "Settled loser") : "Closed"}
+                </span>
+              )}
+
+              <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                {daysLeft}d left
+              </span>
+            </div>
           </div>
-          <span style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--muted)" }}>
-            {shortAddr(caller)}
-          </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-          {settled ? (
-            <span style={{
-              fontSize: "11px", fontWeight: 700,
-              color: callerWon ? "var(--green)" : "var(--red)",
-              padding: "2px 8px", borderRadius: "4px",
-              background: callerWon ? "var(--green-dim)" : "var(--red-dim)",
-            }}>
-              {callerWon ? "CALLER WON" : "FADERS WON"}
-            </span>
-          ) : isExpired ? (
-            <span style={{ fontSize: "11px", color: "var(--red)", fontWeight: 600 }}>Expired</span>
-          ) : (
-            <span style={{ fontSize: "11px", color: "var(--muted)" }}>{daysLeft}d left</span>
-          )}
-          <span style={{
-            fontSize: "11px", fontWeight: 600, color: "var(--green)",
-            padding: "2px 8px", borderRadius: "4px", background: "var(--green-dim)",
-          }}>
-            {formatOKB(stake)} OKB
-          </span>
-        </div>
+        <button
+          type="button"
+          aria-label="Bookmark market"
+          style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "999px",
+            border: "1px solid var(--border)",
+            background: "var(--surface2)",
+            color: "var(--muted)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <Bookmark size={15} />
+        </button>
       </div>
 
-      <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--text)", lineHeight: 1.4, margin: 0 }}>
-        {claim}
-      </p>
-
-      <div>
-        <div style={{
-          height: "6px", borderRadius: "3px", background: "var(--surface2)",
-          overflow: "hidden", display: "flex",
-        }}>
-          <div style={{ width: `${backerPct}%`, background: "var(--green)", transition: "width 0.3s ease" }} />
-          <div style={{ width: `${faderPct}%`, background: "var(--red)", transition: "width 0.3s ease" }} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px", gap: "8px" }}>
-          <span style={{ fontSize: "11px", color: "var(--green)", fontWeight: 600 }}>
-            Backing {backerPct}% · {formatOKB(backerPool + stake)} OKB
-          </span>
-          <span style={{ fontSize: "11px", color: "var(--red)", fontWeight: 600 }}>
-            {formatOKB(faderPool)} OKB · {faderPct}% Fading
-          </span>
-        </div>
-      </div>
-
-      {!settled && !isExpired && (
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: "10px", alignItems: "center" }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--green)" }}>Back it</span>
+          <span style={{ fontSize: "12px", color: "var(--muted)" }}>{backerPct}%</span>
           <input
             type="number"
             value={amount}
@@ -178,41 +244,89 @@ export function CallCard({
             step="0.01"
             disabled={isPending}
             style={{
-              width: "80px", padding: "8px 10px", borderRadius: "8px",
-              background: "var(--surface2)", border: "1px solid var(--border)",
-              color: "var(--text)", fontSize: "13px", fontWeight: 600,
-              outline: "none", textAlign: "right",
+              width: "74px",
+              padding: "7px 8px",
+              borderRadius: "999px",
+              background: "var(--surface2)",
+              border: "1px solid var(--border)",
+              color: "var(--text)",
+              fontSize: "12px",
+              fontWeight: 700,
+              outline: "none",
+              textAlign: "right",
             }}
           />
-          <span style={{ fontSize: "12px", color: "var(--muted)" }}>OKB</span>
-
-          <button
-            onClick={handleBack}
-            disabled={isPending}
-            style={{
-              flex: 1, minWidth: "110px", padding: "9px 0", borderRadius: "8px", fontSize: "13px",
-              fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer",
-              background: isPending ? "var(--surface2)" : "var(--green)",
-              color: isPending ? "var(--muted)" : "#000", border: "none",
-            }}
-          >
-            {isPending ? "Pending..." : "Back it ↑"}
-          </button>
-
-          <button
-            onClick={handleFade}
-            disabled={isPending}
-            style={{
-              flex: 1, minWidth: "110px", padding: "9px 0", borderRadius: "8px", fontSize: "13px",
-              fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer",
-              background: isPending ? "var(--surface2)" : "var(--red)",
-              color: isPending ? "var(--muted)" : "#fff", border: "none",
-            }}
-          >
-            {isPending ? "Pending..." : "Fade it ↓"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end", minWidth: 0 }}>
+            <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
+              {formatOKB(backingValue)} OKB staked
+            </span>
+            <button
+              onClick={handleBack}
+              disabled={isPending}
+              style={{
+                ...rowButtonBase,
+                background: "var(--green)",
+                color: "#000",
+              }}
+            >
+              YES
+            </button>
+          </div>
         </div>
-      )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: "10px", alignItems: "center" }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--red)" }}>Fade it</span>
+          <span style={{ fontSize: "12px", color: "var(--muted)" }}>{faderPct}%</span>
+          <span style={{ width: "74px", display: "inline-block" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end", minWidth: 0 }}>
+            <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
+              {formatOKB(fadingValue)} OKB staked
+            </span>
+            <button
+              onClick={handleFade}
+              disabled={isPending}
+              style={{
+                ...rowButtonBase,
+                background: "var(--red)",
+                color: "#fff",
+              }}
+            >
+              NO
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", paddingTop: "2px" }}>
+        <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+          {formatOKB(totalVolume)} OKB Vol · World Cup 2026
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          {settled ? (
+            <span style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: callerWon ? "var(--green)" : "var(--red)",
+              padding: "4px 8px",
+              borderRadius: "999px",
+              background: callerWon ? "var(--green-dim)" : "var(--red-dim)",
+            }}>
+              {callerWon ? "CALLER WON" : "FADERS WON"}
+            </span>
+          ) : (
+            <span style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: "var(--muted)",
+              padding: "4px 8px",
+              borderRadius: "999px",
+              background: "var(--surface2)",
+            }}>
+              {shortAddr(caller)}
+            </span>
+          )}
+        </div>
+      </div>
 
       {txStatus === "success" && (
         <div style={{

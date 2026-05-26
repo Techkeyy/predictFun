@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { usePublicClient } from "wagmi";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { THECALL_ABI, THECALL_ADDRESS } from "../../lib/contracts";
+import { PUNDITCARD_ABI, PUNDITCARD_ADDRESS, THECALL_ABI, THECALL_ADDRESS } from "../../lib/contracts";
 import { CallCard } from "../../components/CallCard";
 
 interface CallData {
@@ -17,6 +17,16 @@ interface CallData {
   deadline: bigint;
   settled: boolean;
   callerWon: boolean;
+}
+
+interface LeaderboardRow {
+  address: string;
+  wins: bigint;
+  losses: bigint;
+  totalStaked: bigint;
+  biggestPot: bigint;
+  streak: bigint;
+  accuracy: bigint;
 }
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -35,6 +45,8 @@ function FeedInner() {
   const statusFilter = searchParams.get("status") || "all";
   const [calls, setCalls] = useState<CallData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   useEffect(() => {
     if (!publicClient) return;
@@ -75,7 +87,8 @@ function FeedInner() {
           }
         }
 
-        setCalls(fetched.reverse());
+        const aliveCalls = fetched.filter((call) => call.settled || Number(call.deadline) >= Math.floor(Date.now() / 1000));
+        setCalls(aliveCalls.reverse());
       } catch (error) {
         console.error("Failed to load feed:", error);
       }
@@ -86,16 +99,16 @@ function FeedInner() {
   }, [publicClient]);
 
   const now = Math.floor(Date.now() / 1000);
+  const passesStatus = (call: CallData) => {
+    if (statusFilter === "open") return !call.settled && Number(call.deadline) >= now;
+    if (statusFilter === "settled") return call.settled;
+    return true;
+  };
+
   const filteredCalls = calls.filter((call) => {
     const lower = call.claim.toLowerCase();
 
-    if (statusFilter === "open") {
-      if (call.settled || Number(call.deadline) < now) return false;
-    }
-
-    if (statusFilter === "settled") {
-      if (!call.settled) return false;
-    }
+    if (!passesStatus(call)) return false;
 
     if (activeCat === "all") return true;
     if (activeCat === "open") return !call.settled && Number(call.deadline) >= now;
@@ -104,6 +117,174 @@ function FeedInner() {
     const keywords = CATEGORY_KEYWORDS[activeCat] || [];
     return keywords.some((keyword) => lower.includes(keyword));
   });
+
+  const totalVolume = calls.reduce((sum, call) => sum + call.stake + call.backerPool + call.faderPool, BigInt(0));
+  const openMarkets = calls.filter((call) => !call.settled && Number(call.deadline) >= now).length;
+
+  useEffect(() => {
+    if (!publicClient || activeCat !== "cards") return;
+
+    const loadLeaderboard = async () => {
+      setLeaderboardLoading(true);
+      try {
+        const sourceCalls = calls.filter((call) => passesStatus(call));
+        const uniqueAddresses = Array.from(new Set(sourceCalls.map((call) => call.caller.toLowerCase())));
+
+        const rows = await Promise.all(uniqueAddresses.map(async (address) => {
+          try {
+            const result = await publicClient.readContract({
+              address: PUNDITCARD_ADDRESS as `0x${string}`,
+              abi: PUNDITCARD_ABI,
+              functionName: "getStats",
+              args: [address as `0x${string}`],
+            }) as [bigint, bigint, bigint, bigint, bigint, bigint];
+
+            return {
+              address,
+              wins: result[0],
+              losses: result[1],
+              totalStaked: result[2],
+              biggestPot: result[3],
+              streak: result[4],
+              accuracy: result[5],
+            } satisfies LeaderboardRow;
+          } catch (error) {
+            console.error("Failed to load stats for", address, error);
+            return {
+              address,
+              wins: BigInt(0),
+              losses: BigInt(0),
+              totalStaked: BigInt(0),
+              biggestPot: BigInt(0),
+              streak: BigInt(0),
+              accuracy: BigInt(0),
+            } satisfies LeaderboardRow;
+          }
+        }));
+
+        rows.sort((a, b) => {
+          const winsDelta = Number(b.wins - a.wins);
+          if (winsDelta !== 0) return winsDelta;
+          return Number(b.accuracy - a.accuracy);
+        });
+        setLeaderboard(rows);
+      } catch (error) {
+        console.error("Failed to load leaderboard:", error);
+        setLeaderboard([]);
+      }
+      setLeaderboardLoading(false);
+    };
+
+    loadLeaderboard();
+  }, [activeCat, calls, publicClient, statusFilter]);
+
+  const shortAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const formatOKB = (wei: bigint) => (Number(wei) / 1e18).toFixed(2);
+
+  const openTitle = `${openMarkets} open markets · World Cup 2026 · Built on X Layer`;
+
+  if (activeCat === "cards") {
+    return (
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "18px", flexWrap: "wrap" }}>
+          <div>
+            <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--text)", margin: 0 }}>Leaderboard</h1>
+            <p style={{ fontSize: "14px", color: "var(--muted)", margin: "4px 0 0" }}>
+              Ranked pundits by wins, accuracy, and OKB staked
+            </p>
+          </div>
+          <div style={{
+            padding: "10px 14px",
+            borderRadius: "999px",
+            background: "var(--surface2)",
+            border: "1px solid var(--border)",
+            color: "var(--muted)",
+            fontSize: "13px",
+            fontWeight: 600,
+          }}>
+            {formatOKB(totalVolume)} OKB Total Volume
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", color: "var(--muted)", fontSize: "13px", fontWeight: 600 }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--green)" }} />
+          <span>{openTitle}</span>
+        </div>
+
+        {leaderboardLoading ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted)" }}>Loading leaderboard...</div>
+        ) : leaderboard.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted)" }}>No leaderboard data yet.</div>
+        ) : (
+          <div style={{ border: "1px solid var(--border)", borderRadius: "16px", overflow: "hidden", background: "var(--surface)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "72px 1.5fr 0.8fr 0.8fr 0.9fr 0.9fr", gap: "12px", padding: "12px 16px", background: "var(--surface2)", color: "var(--muted)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              <span>Rank</span>
+              <span>Pundit</span>
+              <span>Wins</span>
+              <span>Losses</span>
+              <span>Accuracy</span>
+              <span>OKB Staked</span>
+            </div>
+            {leaderboard.map((row, index) => {
+              const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}`;
+              const isEven = index % 2 === 0;
+              const accuracy = Number(row.accuracy);
+              const wins = Number(row.wins);
+              const losses = Number(row.losses);
+              return (
+                <button
+                  key={row.address}
+                  type="button"
+                  onClick={() => router.push(`/pundit/${row.address}`)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    display: "grid",
+                    gridTemplateColumns: "72px 1.5fr 0.8fr 0.8fr 0.9fr 0.9fr",
+                    gap: "12px",
+                    alignItems: "center",
+                    padding: "14px 16px",
+                    border: "none",
+                    background: isEven ? "#111318" : "#0c0f14",
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    borderBottom: index < leaderboard.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                  }}
+                >
+                  <span style={{ fontSize: "16px", fontWeight: 800 }}>{medal}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                    <span style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "50%",
+                      background: "var(--surface2)",
+                      border: "1px solid var(--border)",
+                      color: "var(--green)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}>
+                      {row.address.slice(2, 4).toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {shortAddress(row.address)}
+                    </span>
+                  </span>
+                  <span style={{ color: "var(--green)", fontWeight: 800 }}>{wins}</span>
+                  <span style={{ color: "var(--muted)", fontWeight: 700 }}>{losses}</span>
+                  <span style={{ color: "var(--text)", fontWeight: 700 }}>{accuracy}%</span>
+                  <span style={{ color: "var(--text)", fontWeight: 700 }}>{formatOKB(row.totalStaked)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const setStatus = (nextStatus: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -122,42 +303,30 @@ function FeedInner() {
             Back or fade the boldest World Cup predictions on X Layer
           </p>
         </div>
-        <Link href="/make-call" style={{
-          padding: "10px 20px", borderRadius: "8px", background: "var(--green)",
-          color: "#000", fontSize: "14px", fontWeight: 700, textDecoration: "none",
-        }}>
-          + Make a Call
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div style={{
+            padding: "10px 14px",
+            borderRadius: "999px",
+            background: "var(--surface2)",
+            border: "1px solid var(--border)",
+            color: "var(--muted)",
+            fontSize: "13px",
+            fontWeight: 600,
+          }}>
+            {formatOKB(totalVolume)} OKB Total Volume
+          </div>
+          <Link href="/make-call" style={{
+            padding: "10px 20px", borderRadius: "8px", background: "var(--green)",
+            color: "#000", fontSize: "14px", fontWeight: 700, textDecoration: "none",
+          }}>
+            + Make a Call
+          </Link>
+        </div>
       </div>
 
-      <div style={{ display: "flex", gap: "6px", marginBottom: "24px", flexWrap: "wrap" }}>
-        {(["all", "open", "settled"] as const).map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatus(status)}
-            style={{
-              padding: "6px 16px",
-              borderRadius: "20px",
-              border: `1px solid ${statusFilter === status ? "var(--text)" : "var(--border)"}`,
-              background: statusFilter === status ? "var(--text)" : "transparent",
-              color: statusFilter === status ? "var(--bg)" : "var(--muted)",
-              fontSize: "12px",
-              fontWeight: statusFilter === status ? 600 : 400,
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)} Calls
-            {status === "all" && calls.length > 0 && (
-              <span style={{
-                marginLeft: "6px", fontSize: "10px", padding: "1px 5px", borderRadius: "10px",
-                background: "var(--green-dim)", color: "var(--green)",
-              }}>
-                {calls.length}
-              </span>
-            )}
-          </button>
-        ))}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", color: "var(--muted)", fontSize: "13px", fontWeight: 600 }}>
+        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--green)" }} />
+        <span>{openTitle}</span>
       </div>
 
       {loading ? (
@@ -188,8 +357,8 @@ function FeedInner() {
       ) : (
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-          gap: "12px",
+          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gap: "14px",
         }}>
           {filteredCalls.map((call) => (
             <CallCard key={call.id} {...call} />

@@ -24,7 +24,7 @@ const CATEGORY_PILLS = [
   { id: "group", label: "Group Stage" },
   { id: "boot", label: "Golden Boot" },
   { id: "winner", label: "Tournament Winner" },
-  { id: "cards", label: "Cards" },
+  { id: "cards", label: "🏅 Leaderboard" },
   { id: "potm", label: "Player of the Match" },
 ];
 
