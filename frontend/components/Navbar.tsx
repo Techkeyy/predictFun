@@ -39,6 +39,7 @@ export function Navbar() {
   const [dark, setDark] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [networkSwitching, setNetworkSwitching] = useState(false);
+  const [disconnectHover, setDisconnectHover] = useState(false);
 
   const isCorrectNetwork = chainId === 1952;
   const activeCategory = searchParams.get("cat") || "all";
@@ -243,74 +244,72 @@ export function Navbar() {
               alignItems: "center",
               justifyContent: "center",
             }}>
-              {dark ? "L" : "D"}
+              {dark ? "☀️" : "🌙"}
             </button>
 
             {isConnected ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <button
-                  onClick={handleSwitchNetwork}
-                  title="Click to switch network"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    padding: "5px 10px",
-                    borderRadius: "8px",
-                    background: isCorrectNetwork ? "rgba(0,194,120,0.08)" : "rgba(242,54,69,0.08)",
-                    border: `1px solid ${isCorrectNetwork ? "rgba(0,194,120,0.2)" : "rgba(242,54,69,0.3)"}`,
-                    cursor: "pointer",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    color: isCorrectNetwork ? "var(--green)" : "var(--red)",
-                  }}
-                >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  background: "rgba(0,194,120,0.08)",
+                  border: "1px solid rgba(0,194,120,0.2)",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "var(--green)",
+                  whiteSpace: "nowrap",
+                }}>
                   <span style={{
                     width: "6px",
                     height: "6px",
                     borderRadius: "50%",
-                    background: isCorrectNetwork ? "var(--green)" : "var(--red)",
+                    background: "var(--green)",
                     display: "inline-block",
                     flexShrink: 0,
                   }} />
-                  {isCorrectNetwork ? "X Layer Testnet" : "Wrong Network"}
-                </button>
+                  X Layer Testnet
+                </div>
 
                 <div style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
-                  padding: "5px 10px",
+                  padding: "4px 10px",
                   borderRadius: "8px",
                   background: "var(--surface2)",
                   border: "1px solid var(--border)",
                   fontSize: "12px",
                   fontWeight: 600,
                   color: "var(--text)",
+                  whiteSpace: "nowrap",
                 }}>
-                  <span>{formattedBalance}</span>
-                  <span style={{ color: "var(--muted)", fontWeight: 400 }}>OKB</span>
+                  <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{formattedBalance}</span>
+                  <span style={{ color: "var(--muted)", fontWeight: 600 }}>OKB</span>
                 </div>
 
                 <Link href={`/pundit/${address}`} style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "6px",
-                  padding: "5px 10px",
+                  padding: "4px 10px 4px 4px",
                   borderRadius: "8px",
-                  background: "var(--green-dim)",
-                  border: "1px solid rgba(0,194,120,0.25)",
+                  background: "var(--surface2)",
+                  border: "1px solid var(--border)",
                   textDecoration: "none",
+                  whiteSpace: "nowrap",
                 }}>
                   <div style={{
-                    width: "18px",
-                    height: "18px",
+                    width: "20px",
+                    height: "20px",
                     borderRadius: "50%",
                     background: "var(--green)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "8px",
+                    fontSize: "9px",
                     fontWeight: 700,
                     color: "#000",
                     flexShrink: 0,
@@ -327,13 +326,12 @@ export function Navbar() {
                   </span>
                 </Link>
 
-                <button onClick={() => disconnect()} style={{
-                  padding: "5px 10px",
-                  borderRadius: "8px",
+                <button onClick={() => disconnect()} onMouseEnter={() => setDisconnectHover(true)} onMouseLeave={() => setDisconnectHover(false)} style={{
+                  padding: 0,
+                  border: "none",
                   fontSize: "12px",
                   background: "transparent",
-                  border: "1px solid var(--border)",
-                  color: "var(--muted)",
+                  color: disconnectHover ? "var(--red)" : "var(--muted)",
                   cursor: "pointer",
                 }}>
                   Disconnect
@@ -358,7 +356,6 @@ export function Navbar() {
 
         {pathname === "/feed" && (
           <div style={{
-            borderTop: "1px solid var(--border)",
             overflowX: "auto",
             scrollbarWidth: "none",
           }}>
@@ -368,9 +365,10 @@ export function Navbar() {
               padding: "0 24px",
               display: "flex",
               alignItems: "center",
-              gap: "4px",
-              height: "40px",
+              gap: "0",
+              height: "44px",
               whiteSpace: "nowrap",
+              overflowX: "auto",
             }}>
               {CATEGORY_PILLS.map((pill) => {
                 const active = activeCategory === pill.id;
@@ -379,16 +377,17 @@ export function Navbar() {
                     key={pill.id}
                     onClick={() => handleCategoryClick(pill.id)}
                     style={{
-                      padding: "4px 14px",
-                      borderRadius: "20px",
-                      fontSize: "12px",
-                      fontWeight: active ? 600 : 400,
-                      background: active ? "var(--text)" : "transparent",
-                      color: active ? "var(--bg)" : "var(--muted)",
-                      border: `1px solid ${active ? "var(--text)" : "var(--border)"}`,
+                      padding: "8px 14px",
+                      border: "none",
+                      borderBottom: active ? "2px solid var(--text)" : "2px solid transparent",
+                      borderRadius: 0,
+                      fontSize: "13px",
+                      fontWeight: active ? 700 : 400,
+                      background: "transparent",
+                      color: active ? "var(--text)" : "var(--muted)",
                       cursor: "pointer",
                       flexShrink: 0,
-                      transition: "all 0.15s",
+                      transition: "color 0.15s, border-color 0.15s",
                     }}
                   >
                     {pill.label}

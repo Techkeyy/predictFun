@@ -181,7 +181,7 @@ function FeedInner() {
   const shortAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
   const formatOKB = (wei: bigint) => (Number(wei) / 1e18).toFixed(2);
 
-  const openTitle = `${openMarkets} open markets · World Cup 2026 · Built on X Layer`;
+  const openTitle = `${openMarkets} open markets`;
 
   if (activeCat === "cards") {
     return (
