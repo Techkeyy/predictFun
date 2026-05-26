@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatEther } from "viem";
 import { switchToXLayerTestnet } from "../lib/switchNetwork";
+import { NetworkModal } from "./NetworkModal";
 
 const TICKER_ITEMS = [
   "WORLD CUP 2026 · BUILT ON X LAYER",
@@ -41,6 +42,7 @@ export function Navbar() {
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [disconnectHover, setDisconnectHover] = useState(false);
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
 
   const isCorrectNetwork = chainId === 1952;
   const activeCategory = searchParams.get("cat") || "all";
@@ -72,6 +74,14 @@ export function Navbar() {
   useEffect(() => {
     if (!isMobile) setMenuOpen(false);
   }, [isMobile]);
+
+  useEffect(() => {
+    if (isConnected && chainId !== 1952) {
+      setShowNetworkModal(true);
+    } else {
+      setShowNetworkModal(false);
+    }
+  }, [isConnected, chainId]);
 
   const toggleTheme = () => {
     const next = !dark;
@@ -163,40 +173,6 @@ export function Navbar() {
           ))}
         </div>
       </div>
-
-      {isConnected && !isCorrectNetwork && (
-        <div style={{
-          background: "rgba(242,54,69,0.95)",
-          color: "#fff",
-          fontSize: "12px",
-          fontWeight: 600,
-          padding: "8px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "12px",
-          flexWrap: "wrap",
-        }}>
-          <span>Wrong network. Switch to X Layer Testnet to use PredictFun.</span>
-          <button
-            onClick={async () => {
-              await switchToXLayerTestnet();
-            }}
-            style={{
-              padding: "4px 14px",
-              borderRadius: "6px",
-              background: "#fff",
-              color: "#e02020",
-              border: "none",
-              fontSize: "11px",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Switch Network
-          </button>
-        </div>
-      )}
 
       <nav style={{
         background: "var(--surface)",
@@ -592,6 +568,8 @@ export function Navbar() {
           </div>
         )}
       </nav>
+
+      <NetworkModal isOpen={showNetworkModal} onClose={() => setShowNetworkModal(false)} />
     </>
   );
 }
