@@ -191,7 +191,7 @@ function FeedInner() {
   if (activeCat === "cards") {
     return (
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "16px" : "32px 24px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "18px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "18px", flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
           <div>
             <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--text)", margin: 0 }}>Leaderboard</h1>
             <p style={{ fontSize: "14px", color: "var(--muted)", margin: "4px 0 0" }}>
@@ -206,6 +206,8 @@ function FeedInner() {
             color: "var(--muted)",
             fontSize: "13px",
             fontWeight: 600,
+            width: isMobile ? "100%" : "auto",
+            textAlign: isMobile ? "center" : "left",
           }}>
             {formatOKB(totalVolume)} OKB Total Volume
           </div>
@@ -221,8 +223,8 @@ function FeedInner() {
         ) : leaderboard.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted)" }}>No leaderboard data yet.</div>
         ) : (
-          <div style={{ border: "1px solid var(--border)", borderRadius: "16px", overflow: "hidden", background: "var(--surface)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "72px 1.5fr 0.8fr 0.8fr 0.9fr 0.9fr", gap: "12px", padding: "12px 16px", background: "var(--surface2)", color: "var(--muted)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <div style={{ border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden", background: "var(--surface)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "72px 1.5fr 0.8fr 0.8fr 0.9fr 0.9fr", gap: "12px", padding: "12px 20px", background: "var(--surface2)", color: "var(--muted)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
               <span>Rank</span>
               <span>Pundit</span>
               <span>Wins</span>
@@ -238,6 +240,8 @@ function FeedInner() {
                   const accuracy = Number(row.accuracy);
                   const wins = Number(row.wins);
                   const losses = Number(row.losses);
+                  const accuracyLabel = accuracy === 0 ? "—" : `${accuracy}%`;
+                  const stakedLabel = Number(row.totalStaked) === 0 ? "—" : formatOKB(row.totalStaked);
                   return (
                     <button
                       key={row.address}
@@ -250,7 +254,7 @@ function FeedInner() {
                         gridTemplateColumns: "72px 1.5fr 0.8fr 0.8fr 0.9fr 0.9fr",
                         gap: "12px",
                         alignItems: "center",
-                        padding: "14px 16px",
+                        padding: "14px 20px",
                         border: "none",
                         background: isEven ? "var(--surface)" : "var(--surface2)",
                         color: "var(--text)",
@@ -258,15 +262,15 @@ function FeedInner() {
                         borderBottom: index < leaderboard.length - 1 ? "1px solid var(--border)" : "none",
                       }}
                     >
-                      <span style={{ fontSize: "16px", fontWeight: 800 }}>{medal}</span>
+                      <span style={{ fontSize: "16px", fontWeight: 800, color: index < 3 ? "var(--text)" : "var(--muted)" }}>{medal}</span>
                       <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                         <span style={{
                           width: "28px",
                           height: "28px",
                           borderRadius: "50%",
-                          background: "var(--surface2)",
-                          border: "1px solid var(--border)",
-                          color: "var(--green)",
+                          background: "var(--green)",
+                          color: "#000",
+                          border: "1px solid rgba(0,0,0,0.06)",
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -282,8 +286,8 @@ function FeedInner() {
                       </span>
                       <span style={{ color: "var(--green)", fontWeight: 800 }}>{wins}</span>
                       <span style={{ color: "var(--muted)", fontWeight: 700 }}>{losses}</span>
-                      <span style={{ color: "var(--text)", fontWeight: 700 }}>{accuracy}%</span>
-                      <span style={{ color: "var(--text)", fontWeight: 700 }}>{formatOKB(row.totalStaked)}</span>
+                      <span style={{ color: "var(--text)", fontWeight: 700 }}>{accuracyLabel}</span>
+                      <span style={{ color: "var(--text)", fontWeight: 700 }}>{stakedLabel}</span>
                     </button>
                   );
                 })}

@@ -3,36 +3,30 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #ffffff;
-  --surface: #f7f7f7;
-  --surface2: #efefef;
-  --border: #e2e2e2;
+html:not(.dark) {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface2: #f0f0f0;
+  --border: #e0e0e0;
   --text: #0a0a0a;
   --muted: #6b7280;
-  --green: #00c278;
-  --green-dim: rgba(0,194,120,0.12);
-  --red: #f23645;
-  --red-dim: rgba(242,54,69,0.12);
-  --blue: #3b82f6;
-  --blue-dim: rgba(59,130,246,0.12);
-  --gold: #f59e0b;
+  --green: #00a86b;
+  --green-dim: rgba(0, 168, 107, 0.12);
+  --red: #dc2626;
+  --red-dim: rgba(220, 38, 38, 0.12);
 }
 
-.dark {
+html.dark {
   --bg: #0a0a0a;
   --surface: #111111;
   --surface2: #1a1a1a;
-  --border: #242424;
-  --text: #f0f0f0;
+  --border: #2a2a2a;
+  --text: #f5f5f5;
   --muted: #6b7280;
   --green: #00c278;
-  --green-dim: rgba(0,194,120,0.12);
+  --green-dim: rgba(0, 194, 120, 0.12);
   --red: #f23645;
-  --red-dim: rgba(242,54,69,0.12);
-  --blue: #3b82f6;
-  --blue-dim: rgba(59,130,246,0.12);
-  --gold: #f59e0b;
+  --red-dim: rgba(242, 54, 69, 0.12);
 }
 
 * { box-sizing: border-box; padding: 0; margin: 0; }

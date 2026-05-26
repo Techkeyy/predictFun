@@ -54,10 +54,7 @@ export function CallCard({
   const backerPct = totalPool > BigInt(0) ? Math.round((Number(backerPool + stake) / Number(totalPool)) * 100) : 100;
   const faderPct = 100 - backerPct;
   const daysLeft = Math.max(0, Math.ceil((deadlineNum - now) / 86400));
-  const shortAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   const formatOKB = (wei: bigint) => (Number(wei) / 1e18).toFixed(3);
-  const totalVolume = stake + backerPool + faderPool;
-  const openMarket = !settled && !isExpired;
   const backingValue = backerPool + stake;
   const fadingValue = faderPool;
 
@@ -127,7 +124,6 @@ export function CallCard({
   };
 
   const isPending = txStatus === "pending";
-
   const actionButtonStyle = {
     width: isMobile ? "100%" : "84px",
     padding: "10px 14px",
@@ -197,14 +193,14 @@ export function CallCard({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              {openMarket ? (
+              {isExpired ? (
+                <span style={{ fontSize: "11px", fontWeight: 700, color: callerWon ? "var(--green)" : "var(--red)" }}>
+                  {settled ? (callerWon ? "Settled winner" : "Settled loser") : "Closed"}
+                </span>
+              ) : (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 700, color: "var(--green)" }}>
                   <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "var(--green)" }} />
                   LIVE
-                </span>
-              ) : (
-                <span style={{ fontSize: "11px", fontWeight: 700, color: callerWon ? "var(--green)" : "var(--red)" }}>
-                  {settled ? (callerWon ? "Settled winner" : "Settled loser") : "Closed"}
                 </span>
               )}
 
@@ -237,15 +233,8 @@ export function CallCard({
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--green)" }}>Back it</span>
-          <span style={{ fontSize: "12px", color: "var(--muted)" }}>{backerPct}%</span>
-          <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
-            {formatOKB(backingValue)} OKB staked
-          </span>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600 }}>Stake</span>
           <input
             type="number"
             value={amount}
@@ -254,7 +243,7 @@ export function CallCard({
             step="0.01"
             disabled={isPending}
             style={{
-              width: isMobile ? "100%" : "74px",
+              width: "90px",
               padding: "7px 8px",
               borderRadius: "999px",
               background: "var(--surface2)",
@@ -266,6 +255,18 @@ export function CallCard({
               textAlign: "right",
             }}
           />
+          <span style={{ fontSize: "11px", color: "var(--muted)" }}>OKB</span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "space-between", gap: "10px", flexDirection: isMobile ? "column" : "row" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--green)" }}>Back it</span>
+            <span style={{ fontSize: "12px", color: "var(--muted)" }}>{backerPct}%</span>
+            <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
+              {formatOKB(backingValue)} OKB staked
+            </span>
+          </div>
+
           <button
             onClick={handleBack}
             disabled={isPending}
@@ -273,37 +274,38 @@ export function CallCard({
               ...actionButtonStyle,
               background: "var(--green)",
               color: "#000",
-              flex: 1,
             }}
           >
             Back it
           </button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--red)" }}>Fade it</span>
-          <span style={{ fontSize: "12px", color: "var(--muted)" }}>{faderPct}%</span>
-          <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
-            {formatOKB(fadingValue)} OKB staked
-          </span>
-        </div>
+        <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "space-between", gap: "10px", flexDirection: isMobile ? "column" : "row" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--red)" }}>Fade it</span>
+            <span style={{ fontSize: "12px", color: "var(--muted)" }}>{faderPct}%</span>
+            <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
+              {formatOKB(fadingValue)} OKB staked
+            </span>
+          </div>
 
-        <button
-          onClick={handleFade}
-          disabled={isPending}
-          style={{
-            ...actionButtonStyle,
-            background: "var(--red)",
-            color: "#fff",
-          }}
-        >
-          Fade it
-        </button>
+          <button
+            onClick={handleFade}
+            disabled={isPending}
+            style={{
+              ...actionButtonStyle,
+              background: "var(--red)",
+              color: "#fff",
+            }}
+          >
+            Fade it
+          </button>
+        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", paddingTop: "2px" }}>
         <span style={{ fontSize: "11px", color: "var(--muted)" }}>
-          {formatOKB(totalVolume)} OKB Vol · World Cup 2026
+          {formatOKB(totalPool)} OKB Vol · World Cup 2026
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           {settled ? (
@@ -328,18 +330,26 @@ export function CallCard({
 
       {txStatus === "success" && (
         <div style={{
-          padding: "8px 12px", borderRadius: "8px", background: "var(--green-dim)",
-          border: "1px solid rgba(0,194,120,0.3)", fontSize: "12px",
-          color: "var(--green)", fontWeight: 600,
+          padding: "8px 12px",
+          borderRadius: "8px",
+          background: "var(--green-dim)",
+          border: "1px solid rgba(0,194,120,0.3)",
+          fontSize: "12px",
+          color: "var(--green)",
+          fontWeight: 600,
         }}>
           Transaction submitted! Check your wallet for confirmation.
         </div>
       )}
       {txStatus === "error" && (
         <div style={{
-          padding: "8px 12px", borderRadius: "8px", background: "var(--red-dim)",
-          border: "1px solid rgba(242,54,69,0.3)", fontSize: "12px",
-          color: "var(--red)", fontWeight: 600,
+          padding: "8px 12px",
+          borderRadius: "8px",
+          background: "var(--red-dim)",
+          border: "1px solid rgba(242,54,69,0.3)",
+          fontSize: "12px",
+          color: "var(--red)",
+          fontWeight: 600,
         }}>
           Transaction failed. Check MetaMask and make sure you're on X Layer Testnet.
         </div>

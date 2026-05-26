@@ -5,8 +5,8 @@ import { useAccount, useBalance, useChainId, useConnect, useDisconnect } from "w
 import { injected } from "wagmi/connectors";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { switchToXLayerTestnet } from "../lib/switchNetwork";
 import { formatEther } from "viem";
+import { switchToXLayerTestnet } from "../lib/switchNetwork";
 
 const TICKER_ITEMS = [
   "WORLD CUP 2026 · BUILT ON X LAYER",
@@ -40,7 +40,6 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [walletOpen, setWalletOpen] = useState(false);
   const [disconnectHover, setDisconnectHover] = useState(false);
 
   const isCorrectNetwork = chainId === 1952;
@@ -60,10 +59,7 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    const updateViewport = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const updateViewport = () => setIsMobile(window.innerWidth < 768);
     updateViewport();
     window.addEventListener("resize", updateViewport);
     return () => window.removeEventListener("resize", updateViewport);
@@ -71,14 +67,10 @@ export function Navbar() {
 
   useEffect(() => {
     setMenuOpen(false);
-    setWalletOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!isMobile) {
-      setMenuOpen(false);
-      setWalletOpen(false);
-    }
+    if (!isMobile) setMenuOpen(false);
   }, [isMobile]);
 
   const toggleTheme = () => {
@@ -115,8 +107,8 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/feed", label: "Feed" },
-    { href: "/portfolio", label: "Portfolio" },
     { href: "/make-call", label: "Make a Call" },
+    { href: "/portfolio", label: "Portfolio" },
     { href: "/docs", label: "Docs" },
     ...(isConnected && address ? [{ href: `/pundit/${address}`, label: "My Card" }] : []),
   ];
@@ -213,7 +205,7 @@ export function Navbar() {
         top: 0,
         zIndex: 50,
       }}>
-        <div style={{ position: "relative", maxWidth: "1200px", margin: "0 auto", padding: "0 24px" }}>
+        <div style={{ position: "relative", maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "0 16px" : "0 24px" }}>
           <div style={{
             height: "54px",
             display: "flex",
@@ -268,44 +260,43 @@ export function Navbar() {
             )}
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-              <button onClick={toggleTheme} style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                background: "var(--surface2)",
-                border: "1px solid var(--border)",
-                color: "var(--muted)",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                {dark ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="5" />
-                    <line x1="12" y1="1" x2="12" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="23" />
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                    <line x1="1" y1="12" x2="3" y2="12" />
-                    <line x1="21" y1="12" x2="23" y2="12" />
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                  </svg>
-                )}
-              </button>
+              {!isMobile && (
+                <button onClick={toggleTheme} style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  background: "var(--surface2)",
+                  border: "1px solid var(--border)",
+                  color: "var(--muted)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  {dark ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="5" />
+                      <line x1="12" y1="1" x2="12" y2="3" />
+                      <line x1="12" y1="21" x2="12" y2="23" />
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                      <line x1="1" y1="12" x2="3" y2="12" />
+                      <line x1="21" y1="12" x2="23" y2="12" />
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                  )}
+                </button>
+              )}
 
               {isMobile && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setMenuOpen((value) => !value);
-                    setWalletOpen(false);
-                  }}
+                  onClick={() => setMenuOpen((value) => !value)}
                   style={{
                     width: "36px",
                     height: "36px",
@@ -325,26 +316,56 @@ export function Navbar() {
                 </button>
               )}
 
-              {isConnected ? (
-                isMobile ? (
+              {!isMobile && (isConnected ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {networkChip}
+
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "4px 10px",
+                    borderRadius: "8px",
+                    background: "var(--surface2)",
+                    border: "1px solid var(--border)",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--text)",
+                    whiteSpace: "nowrap",
+                  }}>
+                    <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{formattedBalance}</span>
+                    <span style={{ color: "var(--muted)", fontWeight: 600 }}>OKB</span>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => {
-                      setWalletOpen((value) => !value);
-                      setMenuOpen(false);
-                    }}
+                    onClick={() => window.open("https://www.okx.com/web3/faucet", "_blank")}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "4px 10px 4px 4px",
-                      borderRadius: "8px",
-                      background: "var(--surface2)",
-                      border: "1px solid var(--border)",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      background: "rgba(0,194,120,0.08)",
+                      border: "1px solid rgba(0,194,120,0.2)",
+                      color: "var(--green)",
+                      fontSize: "12px",
+                      fontWeight: 600,
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                     }}
                   >
+                    🚰 Faucet
+                  </button>
+
+                  <Link href={`/pundit/${address}`} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "4px 10px 4px 4px",
+                    borderRadius: "8px",
+                    background: "var(--surface2)",
+                    border: "1px solid var(--border)",
+                    textDecoration: "none",
+                    whiteSpace: "nowrap",
+                  }}>
                     <div style={{
                       width: "20px",
                       height: "20px",
@@ -360,97 +381,27 @@ export function Navbar() {
                     }}>
                       {address ? address.slice(2, 4).toUpperCase() : ""}
                     </div>
-                    <span style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--green)", fontWeight: 600 }}>
+                    <span style={{
+                      fontSize: "12px",
+                      fontFamily: "monospace",
+                      color: "var(--green)",
+                      fontWeight: 600,
+                    }}>
                       {short}
                     </span>
+                  </Link>
+
+                  <button onClick={() => disconnect()} onMouseEnter={() => setDisconnectHover(true)} onMouseLeave={() => setDisconnectHover(false)} style={{
+                    padding: 0,
+                    border: "none",
+                    fontSize: "12px",
+                    background: "transparent",
+                    color: disconnectHover ? "var(--red)" : "var(--muted)",
+                    cursor: "pointer",
+                  }}>
+                    Disconnect
                   </button>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    {networkChip}
-
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "4px 10px",
-                      borderRadius: "8px",
-                      background: "var(--surface2)",
-                      border: "1px solid var(--border)",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "var(--text)",
-                      whiteSpace: "nowrap",
-                    }}>
-                      <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{formattedBalance}</span>
-                      <span style={{ color: "var(--muted)", fontWeight: 600 }}>OKB</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => window.open("https://www.okx.com/web3/faucet", "_blank")}
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: "6px",
-                        background: "rgba(0,194,120,0.08)",
-                        border: "1px solid rgba(0,194,120,0.2)",
-                        color: "var(--green)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      🚰 Faucet
-                    </button>
-
-                    <Link href={`/pundit/${address}`} style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "4px 10px 4px 4px",
-                      borderRadius: "8px",
-                      background: "var(--surface2)",
-                      border: "1px solid var(--border)",
-                      textDecoration: "none",
-                      whiteSpace: "nowrap",
-                    }}>
-                      <div style={{
-                        width: "20px",
-                        height: "20px",
-                        borderRadius: "50%",
-                        background: "var(--green)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        color: "#000",
-                        flexShrink: 0,
-                      }}>
-                        {address ? address.slice(2, 4).toUpperCase() : ""}
-                      </div>
-                      <span style={{
-                        fontSize: "12px",
-                        fontFamily: "monospace",
-                        color: "var(--green)",
-                        fontWeight: 600,
-                      }}>
-                        {short}
-                      </span>
-                    </Link>
-
-                    <button onClick={() => disconnect()} onMouseEnter={() => setDisconnectHover(true)} onMouseLeave={() => setDisconnectHover(false)} style={{
-                      padding: 0,
-                      border: "none",
-                      fontSize: "12px",
-                      background: "transparent",
-                      color: disconnectHover ? "var(--red)" : "var(--muted)",
-                      cursor: "pointer",
-                    }}>
-                      Disconnect
-                    </button>
-                  </div>
-                )
+                </div>
               ) : (
                 <button onClick={handleConnect} style={{
                   padding: "7px 18px",
@@ -464,24 +415,24 @@ export function Navbar() {
                 }}>
                   Connect Wallet
                 </button>
-              )}
+              ))}
             </div>
           </div>
 
           {isMobile && menuOpen && (
             <div style={{
               position: "absolute",
-              top: "58px",
-              right: "24px",
-              width: "220px",
+              left: 0,
+              right: 0,
+              top: "54px",
               background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "12px",
-              padding: "8px",
+              borderTop: "1px solid var(--border)",
+              borderBottom: "1px solid var(--border)",
+              padding: "14px 16px 16px",
               boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
               zIndex: 60,
             }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 {navLinks.map((link) => {
                   const active = pathname === link.href || pathname.startsWith(link.href + "/");
                   return (
@@ -503,106 +454,97 @@ export function Navbar() {
                   );
                 })}
               </div>
-            </div>
-          )}
 
-          {isMobile && isConnected && walletOpen && (
-            <div style={{
-              position: "absolute",
-              top: "58px",
-              right: "24px",
-              width: "240px",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "12px",
-              padding: "10px",
-              boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
-              zIndex: 60,
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}>
-              {networkChip}
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "4px 10px",
-                borderRadius: "8px",
-                background: "var(--surface2)",
-                border: "1px solid var(--border)",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "var(--text)",
-                whiteSpace: "nowrap",
-              }}>
-                <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{formattedBalance}</span>
-                <span style={{ color: "var(--muted)", fontWeight: 600 }}>OKB</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => window.open("https://www.okx.com/web3/faucet", "_blank")}
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  background: "rgba(0,194,120,0.08)",
-                  border: "1px solid rgba(0,194,120,0.2)",
-                  color: "var(--green)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  width: "100%",
-                  textAlign: "left",
-                }}
-              >
-                🚰 Faucet
-              </button>
-              <Link
-                href={`/pundit/${address}`}
-                onClick={() => setWalletOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "4px 10px 4px 4px",
-                  borderRadius: "8px",
-                  background: "var(--surface2)",
-                  border: "1px solid var(--border)",
-                  textDecoration: "none",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <div style={{
-                  width: "20px",
-                  height: "20px",
-                  borderRadius: "50%",
-                  background: "var(--green)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  color: "#000",
-                  flexShrink: 0,
-                }}>
-                  {address ? address.slice(2, 4).toUpperCase() : ""}
+              {isConnected ? (
+                <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {networkChip}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: "var(--surface2)",
+                    border: "1px solid var(--border)",
+                  }}>
+                    <div style={{
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      background: "var(--green)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      color: "#000",
+                      flexShrink: 0,
+                    }}>
+                      {address ? address.slice(2, 4).toUpperCase() : ""}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--text)", fontWeight: 600 }}>
+                        {short}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>
+                        {formattedBalance} OKB
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => window.open("https://www.okx.com/web3/faucet", "_blank")}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      background: "rgba(0,194,120,0.08)",
+                      border: "1px solid rgba(0,194,120,0.2)",
+                      color: "var(--green)",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    🚰 Faucet
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => disconnect()}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      background: "transparent",
+                      border: "1px solid var(--border)",
+                      color: "var(--muted)",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    Disconnect
+                  </button>
                 </div>
-                <span style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--green)", fontWeight: 600 }}>
-                  {short}
-                </span>
-              </Link>
-              <button onClick={() => disconnect()} onMouseEnter={() => setDisconnectHover(true)} onMouseLeave={() => setDisconnectHover(false)} style={{
-                padding: 0,
-                border: "none",
-                fontSize: "12px",
-                background: "transparent",
-                color: disconnectHover ? "var(--red)" : "var(--muted)",
-                cursor: "pointer",
-                textAlign: "left",
-              }}>
-                Disconnect
-              </button>
+              ) : (
+                <div style={{ marginTop: "14px" }}>
+                  <button onClick={handleConnect} style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    background: "var(--green)",
+                    color: "#000",
+                    border: "none",
+                    cursor: "pointer",
+                  }}>
+                    Connect Wallet
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -612,7 +554,7 @@ export function Navbar() {
             <div style={{
               maxWidth: "1200px",
               margin: "0 auto",
-              padding: "0 24px",
+              padding: isMobile ? "0 16px" : "0 24px",
               display: "flex",
               alignItems: "center",
               gap: "0",
