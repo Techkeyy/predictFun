@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAccount, useConnect, useDisconnect, useBalance, useChainId } from "wagmi";
+import { useEffect, useState } from "react";
+import { useAccount, useBalance, useChainId, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { switchToXLayerTestnet } from "../lib/switchNetwork";
 import { formatEther } from "viem";
 
@@ -33,16 +33,18 @@ export function Navbar() {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [dark, setDark] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [activeCategory, setActiveCategory] = useState("all");
   const [networkSwitching, setNetworkSwitching] = useState(false);
-  const pathname = usePathname();
 
   const isCorrectNetwork = chainId === 1952;
+  const activeCategory = searchParams.get("cat") || "all";
 
   const { data: balance } = useBalance({
-    address: address,
+    address,
     query: { enabled: !!address && isConnected },
   });
 
@@ -61,10 +63,6 @@ export function Navbar() {
     localStorage.setItem("theme", next ? "dark" : "light");
   };
 
-  const short = address
-    ? address.slice(0, 6) + "..." + address.slice(-4)
-    : "";
-
   const handleConnect = async () => {
     if (typeof window !== "undefined" && (window as any).ethereum) {
       try {
@@ -72,35 +70,47 @@ export function Navbar() {
           method: "wallet_revokePermissions",
           params: [{ eth_accounts: {} }],
         });
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
     }
     connect({ connector: injected() });
   };
 
   const handleSwitchNetwork = async () => {
     setNetworkSwitching(true);
-    await switchToXLayerTestnet();
-    setNetworkSwitching(false);
+    try {
+      await switchToXLayerTestnet();
+    } finally {
+      setNetworkSwitching(false);
+    }
+  };
+
+  const handleCategoryClick = (catId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (catId === "all") {
+      params.delete("cat");
+    } else {
+      params.set("cat", catId);
+    }
+    const query = params.toString();
+    router.push(query ? `/feed?${query}` : "/feed");
   };
 
   const navLinks = [
     { href: "/feed", label: "Feed" },
     { href: "/make-call", label: "Make a Call" },
     { href: "/docs", label: "Docs" },
-    ...(isConnected && address
-      ? [{ href: `/pundit/${address}`, label: "My Card" }]
-      : []),
+    ...(isConnected && address ? [{ href: `/pundit/${address}`, label: "My Card" }] : []),
   ];
 
-  const formattedBalance = balance
-    ? parseFloat(formatEther(balance.value)).toFixed(3)
-    : "0.000";
+  const formattedBalance = balance ? parseFloat(formatEther(balance.value)).toFixed(3) : "0.000";
+  const short = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
 
   if (!mounted) return null;
 
   return (
     <>
-      {/* Ticker */}
       <div style={{
         background: "var(--green)",
         color: "#000",
@@ -126,7 +136,6 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Wrong network banner */}
       {isConnected && !isCorrectNetwork && (
         <div style={{
           background: "rgba(242,54,69,0.95)",
@@ -138,20 +147,20 @@ export function Navbar() {
           alignItems: "center",
           justifyContent: "center",
           gap: "12px",
+          flexWrap: "wrap",
         }}>
-          <span>Wrong network detected. Switch to X Layer Testnet to use PredictFun.</span>
+          <span>Wrong network. Switch to X Layer Testnet to use PredictFun.</span>
           <button
             onClick={handleSwitchNetwork}
             style={{
               padding: "4px 14px",
               borderRadius: "6px",
               background: "#fff",
-              color: "var(--red)",
+              color: "#e02020",
               border: "none",
               fontSize: "11px",
               fontWeight: 700,
               cursor: "pointer",
-              flexShrink: 0,
             }}
           >
             {networkSwitching ? "Switching..." : "Switch Network"}
@@ -159,7 +168,6 @@ export function Navbar() {
         </div>
       )}
 
-      {/* Main nav */}
       <nav style={{
         background: "var(--surface)",
         borderBottom: "1px solid var(--border)",
@@ -177,7 +185,6 @@ export function Navbar() {
           justifyContent: "space-between",
           gap: "16px",
         }}>
-          {/* Logo */}
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
             <span style={{
               fontFamily: "'Space Grotesk', sans-serif",
@@ -202,8 +209,7 @@ export function Navbar() {
             </span>
           </Link>
 
-          {/* Nav links */}
-          <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "2px", overflowX: "auto" }}>
             {navLinks.map((link) => {
               const active = pathname === link.href || pathname.startsWith(link.href + "/");
               return (
@@ -215,6 +221,7 @@ export function Navbar() {
                   color: active ? "var(--text)" : "var(--muted)",
                   background: active ? "var(--surface2)" : "transparent",
                   transition: "all 0.15s",
+                  whiteSpace: "nowrap",
                 }}>
                   {link.label}
                 </Link>
@@ -222,10 +229,7 @@ export function Navbar() {
             })}
           </div>
 
-          {/* Right */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-
-            {/* Theme toggle */}
             <button onClick={toggleTheme} style={{
               width: "32px",
               height: "32px",
@@ -243,9 +247,7 @@ export function Navbar() {
             </button>
 
             {isConnected ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-
-                {/* Network indicator + switcher */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                 <button
                   onClick={handleSwitchNetwork}
                   title="Click to switch network"
@@ -255,7 +257,7 @@ export function Navbar() {
                     gap: "5px",
                     padding: "5px 10px",
                     borderRadius: "8px",
-                    background: isCorrectNetwork ? "rgba(0,194,120,0.08)" : "var(--red-dim)",
+                    background: isCorrectNetwork ? "rgba(0,194,120,0.08)" : "rgba(242,54,69,0.08)",
                     border: `1px solid ${isCorrectNetwork ? "rgba(0,194,120,0.2)" : "rgba(242,54,69,0.3)"}`,
                     cursor: "pointer",
                     fontSize: "11px",
@@ -274,7 +276,6 @@ export function Navbar() {
                   {isCorrectNetwork ? "X Layer Testnet" : "Wrong Network"}
                 </button>
 
-                {/* OKB Balance */}
                 <div style={{
                   display: "flex",
                   alignItems: "center",
@@ -291,7 +292,6 @@ export function Navbar() {
                   <span style={{ color: "var(--muted)", fontWeight: 400 }}>OKB</span>
                 </div>
 
-                {/* Wallet address — links to pundit card */}
                 <Link href={`/pundit/${address}`} style={{
                   display: "flex",
                   alignItems: "center",
@@ -356,7 +356,6 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Category pills - feed only */}
         {pathname === "/feed" && (
           <div style={{
             borderTop: "1px solid var(--border)",
@@ -376,18 +375,22 @@ export function Navbar() {
               {CATEGORY_PILLS.map((pill) => {
                 const active = activeCategory === pill.id;
                 return (
-                  <button key={pill.id} onClick={() => setActiveCategory(pill.id)} style={{
-                    padding: "4px 14px",
-                    borderRadius: "20px",
-                    fontSize: "12px",
-                    fontWeight: active ? 600 : 400,
-                    background: active ? "var(--text)" : "transparent",
-                    color: active ? "var(--bg)" : "var(--muted)",
-                    border: `1px solid ${active ? "var(--text)" : "var(--border)"}`,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    transition: "all 0.15s",
-                  }}>
+                  <button
+                    key={pill.id}
+                    onClick={() => handleCategoryClick(pill.id)}
+                    style={{
+                      padding: "4px 14px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: active ? 600 : 400,
+                      background: active ? "var(--text)" : "transparent",
+                      color: active ? "var(--bg)" : "var(--muted)",
+                      border: `1px solid ${active ? "var(--text)" : "var(--border)"}`,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      transition: "all 0.15s",
+                    }}
+                  >
                     {pill.label}
                   </button>
                 );

@@ -1,16 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { THECALL_ADDRESS, THECALL_ABI } from "../lib/contracts";
 
-// Note: `useWriteContract` and `useWaitForTransactionReceipt` have different
-// exports depending on wagmi version. We'll import at call sites dynamically
-// if needed during runtime; for TypeScript compile compatibility we'll keep
-// direct contract interaction via `fetch`-style placeholders where necessary.
-
-interface CallData {
+interface CallCardProps {
   id: number;
   caller: string;
   claim: string;
@@ -22,227 +17,219 @@ interface CallData {
   callerWon: boolean;
 }
 
-interface CallCardProps {
-  call: CallData;
-  punditAccuracy?: number;
-}
+export function CallCard({
+  id,
+  caller,
+  claim,
+  stake,
+  backerPool,
+  faderPool,
+  deadline,
+  settled,
+  callerWon,
+}: CallCardProps) {
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const [amount, setAmount] = useState("0.01");
+  const [txStatus, setTxStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
 
-export function CallCard({ call, punditAccuracy }: CallCardProps) {
-  const { isConnected } = useAccount();
-  const [stakeInput, setStakeInput] = useState("0.01");
-  const [action, setAction] = useState<"back" | "fade" | null>(null);
-  const [hovered, setHovered] = useState(false);
+  const totalPool = stake + backerPool + faderPool;
+  const backerPct = totalPool > BigInt(0) ? Math.round(Number((backerPool + stake) * BigInt(100)) / Number(totalPool)) : 100;
+  const faderPct = 100 - backerPct;
+  const now = Math.floor(Date.now() / 1000);
+  const deadlineNum = Number(deadline);
+  const daysLeft = Math.max(0, Math.ceil((deadlineNum - now) / 86400));
+  const isExpired = now > deadlineNum;
 
-  // Lightweight placeholders for transaction state to avoid type/import issues
-  const writeContract = (_: any) => {
-    // noop - real wallet interactions happen in app runtime with wagmi hooks
-    return;
-  };
-  const txHash = undefined as unknown as `0x${string}` | undefined;
-  const isPending = false;
-  const isConfirming = false;
-  const isSuccess = false;
+  const shortAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const formatOKB = (wei: bigint) => (Number(wei) / 1e18).toFixed(3);
 
-  const isExpired = Date.now() / 1000 > Number(call.deadline);
-  const totalPot = call.stake + call.backerPool + call.faderPool;
-  const backPool = call.stake + call.backerPool;
-  const backPct = totalPot > BigInt(0) ? Number(backPool * BigInt(100) / totalPot) : 50;
-  const fadePct = 100 - backPct;
-
-  const timeLeft = () => {
-    const diff = Number(call.deadline) - Date.now() / 1000;
-    if (diff <= 0) return "Expired";
-    const h = Math.floor(diff / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    if (h > 48) return `${Math.floor(h / 24)}d left`;
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m left`;
+  const clearStatus = () => {
+    window.setTimeout(() => setTxStatus("idle"), 3000);
   };
 
-  const handleAction = (type: "back" | "fade") => {
-    if (!isConnected) return;
-    setAction(type);
-    writeContract({
-      address: THECALL_ADDRESS as `0x${string}`,
-      abi: THECALL_ABI,
-      functionName: type === "back" ? "backCall" : "fadeCall",
-      args: [BigInt(call.id)],
-      value: parseEther(stakeInput || "0.01"),
-    });
+  const handleBack = async () => {
+    if (!address) return alert("Connect your wallet first");
+    if (isExpired) return alert("This call has expired");
+    if (settled) return alert("This call is already settled");
+    if (Number.parseFloat(amount) < 0.01) return alert("Minimum stake is 0.01 OKB");
+
+    try {
+      setTxStatus("pending");
+      await writeContractAsync({
+        address: THECALL_ADDRESS as `0x${string}`,
+        abi: THECALL_ABI,
+        functionName: "backCall",
+        args: [BigInt(id)],
+        value: parseEther(amount),
+      });
+      setTxStatus("success");
+      clearStatus();
+    } catch (error) {
+      console.error("Back failed:", error);
+      setTxStatus("error");
+      clearStatus();
+    }
   };
+
+  const handleFade = async () => {
+    if (!address) return alert("Connect your wallet first");
+    if (isExpired) return alert("This call has expired");
+    if (settled) return alert("This call is already settled");
+    if (Number.parseFloat(amount) < 0.01) return alert("Minimum stake is 0.01 OKB");
+
+    try {
+      setTxStatus("pending");
+      await writeContractAsync({
+        address: THECALL_ADDRESS as `0x${string}`,
+        abi: THECALL_ABI,
+        functionName: "fadeCall",
+        args: [BigInt(id)],
+        value: parseEther(amount),
+      });
+      setTxStatus("success");
+      clearStatus();
+    } catch (error) {
+      console.error("Fade failed:", error);
+      setTxStatus("error");
+      clearStatus();
+    }
+  };
+
+  const isPending = txStatus === "pending";
 
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: "var(--surface)",
-        border: `1px solid ${hovered ? "var(--green)" : "var(--border)"}`,
-        borderRadius: "12px",
-        padding: "16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        transition: "border-color 0.15s",
-        cursor: "default",
-      }}
-    >
-      {/* Header row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
+      borderRadius: "12px",
+      padding: "20px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "14px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <div style={{
-            width: "28px", height: "28px", borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--green), var(--blue))",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "10px", fontWeight: 700, color: "#000",
+            width: "26px", height: "26px", borderRadius: "50%",
+            background: "var(--green)", display: "flex", alignItems: "center",
+            justifyContent: "center", fontSize: "9px", fontWeight: 700, color: "#000",
           }}>
-            {call.caller.slice(2, 4).toUpperCase()}
+            {caller.slice(2, 4).toUpperCase()}
           </div>
-          <div>
-            <div style={{ fontSize: "11px", fontFamily: "monospace", color: "var(--muted)" }}>
-              {call.caller.slice(0, 6)}…{call.caller.slice(-4)}
-            </div>
-            {punditAccuracy !== undefined && (
-              <div style={{ fontSize: "10px", color: "var(--green)", fontWeight: 600 }}>
-                {punditAccuracy}% accuracy
-              </div>
-            )}
-          </div>
+          <span style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--muted)" }}>
+            {shortAddr(caller)}
+          </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          {call.settled ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {settled ? (
             <span style={{
-              fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "20px",
-              background: call.callerWon ? "var(--green-dim)" : "var(--red-dim)",
-              color: call.callerWon ? "var(--green)" : "var(--red)",
-              letterSpacing: "0.04em",
+              fontSize: "11px", fontWeight: 700,
+              color: callerWon ? "var(--green)" : "var(--red)",
+              padding: "2px 8px", borderRadius: "4px",
+              background: callerWon ? "var(--green-dim)" : "var(--red-dim)",
             }}>
-              {call.callerWon ? "✓ CALLER WON" : "✗ FADERS WON"}
+              {callerWon ? "CALLER WON" : "FADERS WON"}
             </span>
+          ) : isExpired ? (
+            <span style={{ fontSize: "11px", color: "var(--red)", fontWeight: 600 }}>Expired</span>
           ) : (
-            <>
-              <span style={{
-                fontSize: "10px", fontWeight: 600, padding: "2px 8px", borderRadius: "20px",
-                background: isExpired ? "rgba(100,100,100,0.1)" : "var(--blue-dim)",
-                color: isExpired ? "var(--muted)" : "var(--blue)",
-              }}>
-                {timeLeft()}
-              </span>
-              <span style={{
-                fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "20px",
-                background: "var(--green-dim)", color: "var(--green)",
-              }}>
-                {formatEther(totalPot)} OKB
-              </span>
-            </>
+            <span style={{ fontSize: "11px", color: "var(--muted)" }}>{daysLeft}d left</span>
           )}
+          <span style={{
+            fontSize: "11px", fontWeight: 600, color: "var(--green)",
+            padding: "2px 8px", borderRadius: "4px", background: "var(--green-dim)",
+          }}>
+            {formatOKB(stake)} OKB
+          </span>
         </div>
       </div>
 
-      {/* Claim */}
-      <p style={{ fontSize: "15px", fontWeight: 600, color: "var(--text)", lineHeight: 1.4 }}>
-        {call.claim}
+      <p style={{ fontSize: "16px", fontWeight: 600, color: "var(--text)", lineHeight: 1.4, margin: 0 }}>
+        {claim}
       </p>
 
-      {/* Back / Fade bar */}
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+        <div style={{
+          height: "6px", borderRadius: "3px", background: "var(--surface2)",
+          overflow: "hidden", display: "flex",
+        }}>
+          <div style={{ width: `${backerPct}%`, background: "var(--green)", transition: "width 0.3s ease" }} />
+          <div style={{ width: `${faderPct}%`, background: "var(--red)", transition: "width 0.3s ease" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px", gap: "8px" }}>
           <span style={{ fontSize: "11px", color: "var(--green)", fontWeight: 600 }}>
-            Backing {backPct}% · {formatEther(backPool)} OKB
+            Backing {backerPct}% · {formatOKB(backerPool + stake)} OKB
           </span>
           <span style={{ fontSize: "11px", color: "var(--red)", fontWeight: 600 }}>
-            {formatEther(call.faderPool)} OKB · {fadePct}% Fading
+            {formatOKB(faderPool)} OKB · {faderPct}% Fading
           </span>
-        </div>
-        <div style={{
-          height: "6px", borderRadius: "3px",
-          background: "var(--surface2)", overflow: "hidden", display: "flex",
-        }}>
-          <div style={{
-            width: `${backPct}%`,
-            background: "linear-gradient(90deg, var(--green), #00e090)",
-            borderRadius: "3px 0 0 3px",
-            transition: "width 0.4s ease",
-          }} />
-          <div style={{
-            width: `${fadePct}%`,
-            background: "linear-gradient(90deg, #f23645, #ff6b6b)",
-            borderRadius: "0 3px 3px 0",
-          }} />
         </div>
       </div>
 
-      {/* Action row */}
-      {!call.settled && !isExpired && (
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: "4px",
-            background: "var(--surface2)", border: "1px solid var(--border)",
-            borderRadius: "8px", padding: "0 8px", height: "34px",
-          }}>
-            <input
-              type="number"
-              value={stakeInput}
-              onChange={(e) => setStakeInput(e.target.value)}
-              min="0.01" step="0.01"
-              style={{
-                width: "60px", background: "transparent", border: "none",
-                color: "var(--text)", fontSize: "13px", outline: "none",
-                fontFamily: "inherit",
-              }}
-            />
-            <span style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600 }}>OKB</span>
-          </div>
-
-          {isConnected ? (
-            <>
-              <button
-                onClick={() => handleAction("back")}
-                disabled={isPending || isConfirming}
-                style={{
-                  flex: 1, height: "34px", borderRadius: "8px", border: "none",
-                  background: isPending && action === "back" ? "var(--green-dim)" : "var(--green)",
-                  color: isPending && action === "back" ? "var(--green)" : "#000",
-                  fontSize: "12px", fontWeight: 700, cursor: "pointer",
-                  transition: "opacity 0.15s",
-                }}
-              >
-                {isPending && action === "back" ? "Confirming…" : isConfirming && action === "back" ? "Staking…" : "Back it ↑"}
-              </button>
-              <button
-                onClick={() => handleAction("fade")}
-                disabled={isPending || isConfirming}
-                style={{
-                  flex: 1, height: "34px", borderRadius: "8px", border: "none",
-                  background: isPending && action === "fade" ? "var(--red-dim)" : "var(--red)",
-                  color: isPending && action === "fade" ? "var(--red)" : "#fff",
-                  fontSize: "12px", fontWeight: 700, cursor: "pointer",
-                  transition: "opacity 0.15s",
-                }}
-              >
-                {isPending && action === "fade" ? "Confirming…" : isConfirming && action === "fade" ? "Staking…" : "Fade it ↓"}
-              </button>
-            </>
-          ) : (
-            <div style={{
-              flex: 1, height: "34px", borderRadius: "8px",
+      {!settled && !isExpired && (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            min="0.01"
+            step="0.01"
+            disabled={isPending}
+            style={{
+              width: "80px", padding: "8px 10px", borderRadius: "8px",
               background: "var(--surface2)", border: "1px solid var(--border)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "12px", color: "var(--muted)",
-            }}>
-              Connect wallet to stake
-            </div>
-          )}
+              color: "var(--text)", fontSize: "13px", fontWeight: 600,
+              outline: "none", textAlign: "right",
+            }}
+          />
+          <span style={{ fontSize: "12px", color: "var(--muted)" }}>OKB</span>
+
+          <button
+            onClick={handleBack}
+            disabled={isPending}
+            style={{
+              flex: 1, minWidth: "110px", padding: "9px 0", borderRadius: "8px", fontSize: "13px",
+              fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer",
+              background: isPending ? "var(--surface2)" : "var(--green)",
+              color: isPending ? "var(--muted)" : "#000", border: "none",
+            }}
+          >
+            {isPending ? "Pending..." : "Back it ↑"}
+          </button>
+
+          <button
+            onClick={handleFade}
+            disabled={isPending}
+            style={{
+              flex: 1, minWidth: "110px", padding: "9px 0", borderRadius: "8px", fontSize: "13px",
+              fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer",
+              background: isPending ? "var(--surface2)" : "var(--red)",
+              color: isPending ? "var(--muted)" : "#fff", border: "none",
+            }}
+          >
+            {isPending ? "Pending..." : "Fade it ↓"}
+          </button>
         </div>
       )}
 
-      {isSuccess && (
+      {txStatus === "success" && (
         <div style={{
-          padding: "8px", borderRadius: "8px", background: "var(--green-dim)",
-          textAlign: "center", fontSize: "12px", color: "var(--green)", fontWeight: 600,
+          padding: "8px 12px", borderRadius: "8px", background: "var(--green-dim)",
+          border: "1px solid rgba(0,194,120,0.3)", fontSize: "12px",
+          color: "var(--green)", fontWeight: 600,
         }}>
-          ✓ Staked successfully
+          Transaction submitted! Check your wallet for confirmation.
+        </div>
+      )}
+      {txStatus === "error" && (
+        <div style={{
+          padding: "8px 12px", borderRadius: "8px", background: "var(--red-dim)",
+          border: "1px solid rgba(242,54,69,0.3)", fontSize: "12px",
+          color: "var(--red)", fontWeight: 600,
+        }}>
+          Transaction failed. Check MetaMask and make sure you're on X Layer Testnet.
         </div>
       )}
     </div>
