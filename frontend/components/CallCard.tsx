@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bookmark } from "lucide-react";
 import { useAccount, useWriteContract } from "wagmi";
@@ -35,23 +35,31 @@ export function CallCard({
   const { writeContractAsync } = useWriteContract();
   const [amount, setAmount] = useState("0.01");
   const [txStatus, setTxStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const now = Math.floor(Date.now() / 1000);
   const deadlineNum = Number(deadline);
   const isExpired = now > deadlineNum;
 
-  if (isExpired && !settled) {
-    return null;
-  }
+  if (isExpired && !settled) return null;
 
   const totalPool = stake + backerPool + faderPool;
   const backerPct = totalPool > BigInt(0) ? Math.round((Number(backerPool + stake) / Number(totalPool)) * 100) : 100;
   const faderPct = 100 - backerPct;
   const daysLeft = Math.max(0, Math.ceil((deadlineNum - now) / 86400));
-
   const shortAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   const formatOKB = (wei: bigint) => (Number(wei) / 1e18).toFixed(3);
   const totalVolume = stake + backerPool + faderPool;
+  const openMarket = !settled && !isExpired;
+  const backingValue = backerPool + stake;
+  const fadingValue = faderPool;
 
   const getCategoryIcon = () => {
     const lower = claim.toLowerCase();
@@ -61,10 +69,6 @@ export function CallCard({
     if (lower.includes("winner") || lower.includes("champion") || lower.includes("trophy") || lower.includes("title") || lower.includes("cup")) return "🏆";
     return "⚽";
   };
-
-  const openMarket = !settled && !isExpired;
-  const backingValue = backerPool + stake;
-  const fadingValue = faderPool;
 
   const goToPundit = () => {
     router.push(`/pundit/${caller}`);
@@ -124,8 +128,8 @@ export function CallCard({
 
   const isPending = txStatus === "pending";
 
-  const rowButtonBase = {
-    minWidth: "84px",
+  const actionButtonStyle = {
+    width: isMobile ? "100%" : "84px",
     padding: "10px 14px",
     borderRadius: "999px",
     border: "none",
@@ -140,7 +144,7 @@ export function CallCard({
       background: "var(--surface)",
       border: "1px solid var(--border)",
       borderRadius: "18px",
-      padding: "16px",
+      padding: isMobile ? "14px" : "16px",
       display: "flex",
       flexDirection: "column",
       gap: "14px",
@@ -171,8 +175,8 @@ export function CallCard({
           </button>
 
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <span style={{ fontSize: "20px" }}>{getCategoryIcon()}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: isMobile ? "18px" : "20px" }}>{getCategoryIcon()}</span>
               <button
                 type="button"
                 onClick={goToPundit}
@@ -181,7 +185,7 @@ export function CallCard({
                   background: "transparent",
                   padding: 0,
                   textAlign: "left",
-                  fontSize: "16px",
+                  fontSize: isMobile ? "15px" : "16px",
                   fontWeight: 700,
                   color: "var(--text)",
                   lineHeight: 1.25,
@@ -233,9 +237,15 @@ export function CallCard({
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: "10px", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--green)" }}>Back it</span>
           <span style={{ fontSize: "12px", color: "var(--muted)" }}>{backerPct}%</span>
+          <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
+            {formatOKB(backingValue)} OKB staked
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: "10px" }}>
           <input
             type="number"
             value={amount}
@@ -244,7 +254,7 @@ export function CallCard({
             step="0.01"
             disabled={isPending}
             style={{
-              width: "74px",
+              width: isMobile ? "100%" : "74px",
               padding: "7px 8px",
               borderRadius: "999px",
               background: "var(--surface2)",
@@ -256,45 +266,39 @@ export function CallCard({
               textAlign: "right",
             }}
           />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end", minWidth: 0 }}>
-            <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
-              {formatOKB(backingValue)} OKB staked
-            </span>
-            <button
-              onClick={handleBack}
-              disabled={isPending}
-              style={{
-                ...rowButtonBase,
-                background: "var(--green)",
-                color: "#000",
-              }}
-            >
-              YES
-            </button>
-          </div>
+          <button
+            onClick={handleBack}
+            disabled={isPending}
+            style={{
+              ...actionButtonStyle,
+              background: "var(--green)",
+              color: "#000",
+              flex: 1,
+            }}
+          >
+            Back it
+          </button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: "10px", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--red)" }}>Fade it</span>
           <span style={{ fontSize: "12px", color: "var(--muted)" }}>{faderPct}%</span>
-          <span style={{ width: "74px", display: "inline-block" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end", minWidth: 0 }}>
-            <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
-              {formatOKB(fadingValue)} OKB staked
-            </span>
-            <button
-              onClick={handleFade}
-              disabled={isPending}
-              style={{
-                ...rowButtonBase,
-                background: "var(--red)",
-                color: "#fff",
-              }}
-            >
-              NO
-            </button>
-          </div>
+          <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>
+            {formatOKB(fadingValue)} OKB staked
+          </span>
         </div>
+
+        <button
+          onClick={handleFade}
+          disabled={isPending}
+          style={{
+            ...actionButtonStyle,
+            background: "var(--red)",
+            color: "#fff",
+          }}
+        >
+          Fade it
+        </button>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", paddingTop: "2px" }}>
@@ -314,15 +318,9 @@ export function CallCard({
               {callerWon ? "CALLER WON" : "FADERS WON"}
             </span>
           ) : (
-            <span style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              color: "var(--muted)",
-              padding: "4px 8px",
-              borderRadius: "999px",
-              background: "var(--surface2)",
-            }}>
-              {shortAddr(caller)}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 700, color: "var(--green)" }}>
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "var(--green)" }} />
+              LIVE
             </span>
           )}
         </div>

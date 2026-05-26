@@ -43,9 +43,18 @@ export default function PunditPage() {
   const [hasProfile, setHasProfile] = useState(false);
   const [myCalls, setMyCalls] = useState<CallData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   const isOwnCard = connectedAddress?.toLowerCase() === rawAddress?.toLowerCase();
   const shortAddress = rawAddress ? `${rawAddress.slice(0, 6)}...${rawAddress.slice(-4)}` : "";
+  const displayAddress = isMobile ? shortAddress : rawAddress;
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobile(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!publicClient || !rawAddress) return;
@@ -162,14 +171,14 @@ export default function PunditPage() {
 
   if (loading) {
     return (
-      <div style={{ maxWidth: "700px", margin: "60px auto", padding: "0 24px", textAlign: "center" }}>
+      <div style={{ maxWidth: "700px", margin: "60px auto", padding: isMobile ? "0 16px" : "0 24px", textAlign: "center" }}>
         <div style={{ color: "var(--muted)", fontSize: "14px" }}>Loading pundit card...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: "700px", margin: "40px auto", padding: "0 24px" }}>
+    <div style={{ maxWidth: "700px", margin: "0 auto", padding: isMobile ? "16px" : "40px 24px" }}>
       <div ref={cardRef} style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
@@ -178,58 +187,72 @@ export default function PunditPage() {
       }}>
         <div style={{
           background: "linear-gradient(135deg, #00c278 0%, #00956b 100%)",
-          padding: "32px 28px",
+          padding: isMobile ? "24px 18px" : "32px 28px",
           position: "relative",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: "16px", flexDirection: isMobile ? "column" : "row" }}>
             <div style={{
-              width: "64px", height: "64px", borderRadius: "50%",
-              background: "#000", display: "flex", alignItems: "center",
-              justifyContent: "center", fontSize: "22px", fontWeight: 800,
-              color: "#00c278", border: "3px solid rgba(255,255,255,0.3)",
+              width: "64px",
+              height: "64px",
+              borderRadius: "50%",
+              background: "#000",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "22px",
+              fontWeight: 800,
+              color: "#00c278",
+              border: "3px solid rgba(255,255,255,0.3)",
               flexShrink: 0,
             }}>
               {rawAddress ? rawAddress.slice(2, 4).toUpperCase() : "?"}
             </div>
             <div>
-              <div style={{ fontSize: "20px", fontWeight: 700, color: "#000" }}>{rank}</div>
+              <div style={{ fontSize: isMobile ? "18px" : "20px", fontWeight: 700, color: "#000" }}>{rank}</div>
               <div style={{ fontSize: "13px", fontFamily: "monospace", color: "rgba(0,0,0,0.7)", marginTop: "4px" }}>
-                {shortAddress}
+                {displayAddress}
               </div>
               {!hasProfile && totalCalls === 0 && (
                 <div style={{
-                  marginTop: "6px", fontSize: "11px", fontWeight: 600,
-                  color: "rgba(0,0,0,0.6)", background: "rgba(0,0,0,0.1)",
-                  padding: "2px 8px", borderRadius: "4px", display: "inline-block",
+                  marginTop: "6px",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "rgba(0,0,0,0.6)",
+                  background: "rgba(0,0,0,0.1)",
+                  padding: "2px 8px",
+                  borderRadius: "4px",
+                  display: "inline-block",
                 }}>
-                  New to the arena — make your first call!
+                  New to the arena - make your first call!
                 </div>
               )}
             </div>
           </div>
           <div style={{
-            position: "absolute", top: "16px", right: "20px",
-            fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em",
+            position: "absolute",
+            top: isMobile ? "12px" : "16px",
+            right: isMobile ? "14px" : "20px",
+            fontSize: "10px",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
             color: "rgba(0,0,0,0.5)",
           }}>
-            PREDICTFUN · X LAYER
+            PREDICTFUN - X LAYER
           </div>
         </div>
 
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-          borderBottom: "1px solid var(--border)",
-        }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderBottom: "1px solid var(--border)" }}>
           {[
             { label: "Calls Made", value: String(myCalls.length) },
             { label: "Settled", value: String(totalCalls) },
             { label: "Accuracy", value: `${accuracy}%` },
-          ].map((stat) => (
+          ].map((stat, index) => (
             <div key={stat.label} style={{
-              padding: "20px 16px", textAlign: "center",
-              borderRight: "1px solid var(--border)",
+              padding: isMobile ? "16px 10px" : "20px 16px",
+              textAlign: "center",
+              borderRight: index < 2 ? "1px solid var(--border)" : "none",
             }}>
-              <div style={{ fontSize: "26px", fontWeight: 800, color: "var(--text)" }}>{stat.value}</div>
+              <div style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: "var(--text)", lineHeight: 1.1 }}>{stat.value}</div>
               <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "4px", fontWeight: 500 }}>{stat.label}</div>
             </div>
           ))}
@@ -240,12 +263,13 @@ export default function PunditPage() {
             { label: "Wins", value: String(wins), color: "var(--green)" },
             { label: "Losses", value: String(losses), color: "var(--red)" },
             { label: "OKB Staked", value: formatOKB(stats.totalStaked), color: "var(--text)" },
-          ].map((stat) => (
+          ].map((stat, index) => (
             <div key={stat.label} style={{
-              padding: "20px 16px", textAlign: "center",
-              borderRight: "1px solid var(--border)",
+              padding: isMobile ? "16px 10px" : "20px 16px",
+              textAlign: "center",
+              borderRight: index < 2 ? "1px solid var(--border)" : "none",
             }}>
-              <div style={{ fontSize: "26px", fontWeight: 800, color: stat.color }}>{stat.value}</div>
+              <div style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: stat.color, lineHeight: 1.1 }}>{stat.value}</div>
               <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "4px", fontWeight: 500 }}>{stat.label}</div>
             </div>
           ))}
@@ -257,6 +281,7 @@ export default function PunditPage() {
           type="button"
           onClick={downloadCard}
           style={{
+            width: isMobile ? "100%" : "auto",
             padding: "10px 16px",
             borderRadius: "999px",
             border: "1px solid var(--border)",
@@ -275,8 +300,13 @@ export default function PunditPage() {
         <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text)", marginBottom: "14px" }}>
           {isOwnCard ? "Your Calls" : "Their Calls"}
           <span style={{
-            marginLeft: "8px", background: "var(--surface2)", padding: "2px 8px",
-            borderRadius: "10px", fontSize: "12px", fontWeight: 600, color: "var(--muted)",
+            marginLeft: "8px",
+            background: "var(--surface2)",
+            padding: "2px 8px",
+            borderRadius: "10px",
+            fontSize: "12px",
+            fontWeight: 600,
+            color: "var(--muted)",
           }}>
             {myCalls.length}
           </span>
@@ -284,8 +314,10 @@ export default function PunditPage() {
 
         {myCalls.length === 0 ? (
           <div style={{
-            padding: "40px", textAlign: "center",
-            background: "var(--surface)", border: "1px solid var(--border)",
+            padding: "40px",
+            textAlign: "center",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: "12px",
           }}>
             <p style={{ color: "var(--muted)", fontSize: "14px", margin: 0 }}>
@@ -295,9 +327,15 @@ export default function PunditPage() {
             </p>
             {isOwnCard && (
               <Link href="/make-call" style={{
-                display: "inline-block", marginTop: "14px", padding: "9px 22px",
-                background: "var(--green)", color: "#000", borderRadius: "8px",
-                fontWeight: 700, textDecoration: "none", fontSize: "13px",
+                display: "inline-block",
+                marginTop: "14px",
+                padding: "9px 22px",
+                background: "var(--green)",
+                color: "#000",
+                borderRadius: "8px",
+                fontWeight: 700,
+                textDecoration: "none",
+                fontSize: "13px",
               }}>
                 Make Your First Call
               </Link>
@@ -314,17 +352,27 @@ export default function PunditPage() {
 
               return (
                 <div key={call.id} style={{
-                  padding: "16px 18px",
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: "10px", display: "flex",
-                  alignItems: "center", justifyContent: "space-between", gap: "12px",
+                  padding: isMobile ? "14px 16px" : "16px 18px",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: isMobile ? "flex-start" : "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  flexDirection: isMobile ? "column" : "row",
                 }}>
                   <span style={{ fontSize: "14px", color: "var(--text)", lineHeight: 1.4 }}>
                     {call.claim}
                   </span>
                   <span style={{
-                    flexShrink: 0, fontSize: "11px", fontWeight: 700, padding: "3px 10px",
-                    borderRadius: "4px", background: statusBg, color: statusColor,
+                    flexShrink: 0,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    padding: "3px 10px",
+                    borderRadius: "4px",
+                    background: statusBg,
+                    color: statusColor,
                   }}>
                     {status}
                   </span>

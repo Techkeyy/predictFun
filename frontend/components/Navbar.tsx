@@ -38,7 +38,9 @@ export function Navbar() {
   const searchParams = useSearchParams();
   const [dark, setDark] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [networkSwitching, setNetworkSwitching] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
   const [disconnectHover, setDisconnectHover] = useState(false);
 
   const isCorrectNetwork = chainId === 1952;
@@ -56,6 +58,28 @@ export function Navbar() {
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
   }, []);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setWalletOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMenuOpen(false);
+      setWalletOpen(false);
+    }
+  }, [isMobile]);
 
   const toggleTheme = () => {
     const next = !dark;
@@ -78,15 +102,6 @@ export function Navbar() {
     connect({ connector: injected() });
   };
 
-  const handleSwitchNetwork = async () => {
-    setNetworkSwitching(true);
-    try {
-      await switchToXLayerTestnet();
-    } finally {
-      setNetworkSwitching(false);
-    }
-  };
-
   const handleCategoryClick = (catId: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (catId === "all") {
@@ -100,6 +115,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/feed", label: "Feed" },
+    { href: "/portfolio", label: "Portfolio" },
     { href: "/make-call", label: "Make a Call" },
     { href: "/docs", label: "Docs" },
     ...(isConnected && address ? [{ href: `/pundit/${address}`, label: "My Card" }] : []),
@@ -107,6 +123,25 @@ export function Navbar() {
 
   const formattedBalance = balance ? parseFloat(formatEther(balance.value)).toFixed(3) : "0.000";
   const short = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
+
+  const networkChip = (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "4px 10px",
+      borderRadius: "6px",
+      background: "rgba(0,194,120,0.08)",
+      border: "1px solid rgba(0,194,120,0.2)",
+      fontSize: "11px",
+      fontWeight: 600,
+      color: "var(--green)",
+      whiteSpace: "nowrap",
+    }}>
+      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--green)", display: "inline-block", flexShrink: 0 }} />
+      X Layer Testnet
+    </div>
+  );
 
   if (!mounted) return null;
 
@@ -152,7 +187,9 @@ export function Navbar() {
         }}>
           <span>Wrong network. Switch to X Layer Testnet to use PredictFun.</span>
           <button
-            onClick={handleSwitchNetwork}
+            onClick={async () => {
+              await switchToXLayerTestnet();
+            }}
             style={{
               padding: "4px 14px",
               borderRadius: "6px",
@@ -164,7 +201,7 @@ export function Navbar() {
               cursor: "pointer",
             }}
           >
-            {networkSwitching ? "Switching..." : "Switch Network"}
+            Switch Network
           </button>
         </div>
       )}
@@ -176,154 +213,355 @@ export function Navbar() {
         top: 0,
         zIndex: 50,
       }}>
-        <div style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "0 24px",
-          height: "54px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
-        }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-            <span style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: "17px",
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
-            }}>
-              <span style={{ color: "var(--green)" }}>PREDICT</span>
-              <span style={{ color: "var(--text)" }}>FUN</span>
-            </span>
-            <span style={{
-              fontSize: "9px",
-              fontWeight: 700,
-              padding: "2px 6px",
-              borderRadius: "4px",
-              background: "var(--green-dim)",
-              color: "var(--green)",
-              letterSpacing: "0.06em",
-              border: "1px solid rgba(0,194,120,0.2)",
-            }}>
-              X LAYER
-            </span>
-          </Link>
+        <div style={{ position: "relative", maxWidth: "1200px", margin: "0 auto", padding: "0 24px" }}>
+          <div style={{
+            height: "54px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "16px",
+          }}>
+            <Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+              <span style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: "17px",
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+              }}>
+                <span style={{ color: "var(--green)" }}>PREDICT</span>
+                <span style={{ color: "var(--text)" }}>FUN</span>
+              </span>
+              <span style={{
+                fontSize: "9px",
+                fontWeight: 700,
+                padding: "2px 6px",
+                borderRadius: "4px",
+                background: "var(--green-dim)",
+                color: "var(--green)",
+                letterSpacing: "0.06em",
+                border: "1px solid rgba(0,194,120,0.2)",
+              }}>
+                X LAYER
+              </span>
+            </Link>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "2px", overflowX: "auto" }}>
-            {navLinks.map((link) => {
-              const active = pathname === link.href || pathname.startsWith(link.href + "/");
-              return (
-                <Link key={link.href} href={link.href} style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
+            {!isMobile && (
+              <div style={{ display: "flex", alignItems: "center", gap: "2px", overflowX: "auto" }}>
+                {navLinks.map((link) => {
+                  const active = pathname === link.href || pathname.startsWith(link.href + "/");
+                  return (
+                    <Link key={link.href} href={link.href} style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      fontSize: "13px",
+                      fontWeight: active ? 600 : 400,
+                      color: active ? "var(--text)" : "var(--muted)",
+                      background: active ? "var(--surface2)" : "transparent",
+                      transition: "all 0.15s",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+              <button onClick={toggleTheme} style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "8px",
+                background: "var(--surface2)",
+                border: "1px solid var(--border)",
+                color: "var(--muted)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {dark ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                )}
+              </button>
+
+              {isMobile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen((value) => !value);
+                    setWalletOpen(false);
+                  }}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "8px",
+                    background: "var(--surface2)",
+                    border: "1px solid var(--border)",
+                    color: "var(--muted)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                    fontWeight: 700,
+                  }}
+                >
+                  ☰
+                </button>
+              )}
+
+              {isConnected ? (
+                isMobile ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWalletOpen((value) => !value);
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 10px 4px 4px",
+                      borderRadius: "8px",
+                      background: "var(--surface2)",
+                      border: "1px solid var(--border)",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <div style={{
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      background: "var(--green)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      color: "#000",
+                      flexShrink: 0,
+                    }}>
+                      {address ? address.slice(2, 4).toUpperCase() : ""}
+                    </div>
+                    <span style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--green)", fontWeight: 600 }}>
+                      {short}
+                    </span>
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {networkChip}
+
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "4px 10px",
+                      borderRadius: "8px",
+                      background: "var(--surface2)",
+                      border: "1px solid var(--border)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--text)",
+                      whiteSpace: "nowrap",
+                    }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{formattedBalance}</span>
+                      <span style={{ color: "var(--muted)", fontWeight: 600 }}>OKB</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => window.open("https://www.okx.com/web3/faucet", "_blank")}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        background: "rgba(0,194,120,0.08)",
+                        border: "1px solid rgba(0,194,120,0.2)",
+                        color: "var(--green)",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      🚰 Faucet
+                    </button>
+
+                    <Link href={`/pundit/${address}`} style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 10px 4px 4px",
+                      borderRadius: "8px",
+                      background: "var(--surface2)",
+                      border: "1px solid var(--border)",
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
+                    }}>
+                      <div style={{
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "50%",
+                        background: "var(--green)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        color: "#000",
+                        flexShrink: 0,
+                      }}>
+                        {address ? address.slice(2, 4).toUpperCase() : ""}
+                      </div>
+                      <span style={{
+                        fontSize: "12px",
+                        fontFamily: "monospace",
+                        color: "var(--green)",
+                        fontWeight: 600,
+                      }}>
+                        {short}
+                      </span>
+                    </Link>
+
+                    <button onClick={() => disconnect()} onMouseEnter={() => setDisconnectHover(true)} onMouseLeave={() => setDisconnectHover(false)} style={{
+                      padding: 0,
+                      border: "none",
+                      fontSize: "12px",
+                      background: "transparent",
+                      color: disconnectHover ? "var(--red)" : "var(--muted)",
+                      cursor: "pointer",
+                    }}>
+                      Disconnect
+                    </button>
+                  </div>
+                )
+              ) : (
+                <button onClick={handleConnect} style={{
+                  padding: "7px 18px",
+                  borderRadius: "8px",
                   fontSize: "13px",
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "var(--text)" : "var(--muted)",
-                  background: active ? "var(--surface2)" : "transparent",
-                  transition: "all 0.15s",
-                  whiteSpace: "nowrap",
+                  fontWeight: 600,
+                  background: "var(--green)",
+                  color: "#000",
+                  border: "none",
+                  cursor: "pointer",
                 }}>
-                  {link.label}
-                </Link>
-              );
-            })}
+                  Connect Wallet
+                </button>
+              )}
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-            <button onClick={toggleTheme} style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "8px",
-              background: "var(--surface2)",
+          {isMobile && menuOpen && (
+            <div style={{
+              position: "absolute",
+              top: "58px",
+              right: "24px",
+              width: "220px",
+              background: "var(--surface)",
               border: "1px solid var(--border)",
-              color: "var(--muted)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              borderRadius: "12px",
+              padding: "8px",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+              zIndex: 60,
             }}>
-              {dark ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="5" />
-                  <line x1="12" y1="1" x2="12" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="23" />
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                  <line x1="1" y1="12" x2="3" y2="12" />
-                  <line x1="21" y1="12" x2="23" y2="12" />
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-              )}
-            </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                {navLinks.map((link) => {
+                  const active = pathname === link.href || pathname.startsWith(link.href + "/");
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMenuOpen(false)}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: active ? 700 : 500,
+                        color: active ? "var(--text)" : "var(--muted)",
+                        background: active ? "var(--surface2)" : "transparent",
+                      }}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-            {isConnected ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
+          {isMobile && isConnected && walletOpen && (
+            <div style={{
+              position: "absolute",
+              top: "58px",
+              right: "24px",
+              width: "240px",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "12px",
+              padding: "10px",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+              zIndex: 60,
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}>
+              {networkChip}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "4px 10px",
+                borderRadius: "8px",
+                background: "var(--surface2)",
+                border: "1px solid var(--border)",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--text)",
+                whiteSpace: "nowrap",
+              }}>
+                <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{formattedBalance}</span>
+                <span style={{ color: "var(--muted)", fontWeight: 600 }}>OKB</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.open("https://www.okx.com/web3/faucet", "_blank")}
+                style={{
                   padding: "4px 10px",
                   borderRadius: "6px",
                   background: "rgba(0,194,120,0.08)",
                   border: "1px solid rgba(0,194,120,0.2)",
-                  fontSize: "11px",
-                  fontWeight: 600,
                   color: "var(--green)",
-                  whiteSpace: "nowrap",
-                }}>
-                  <span style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    background: "var(--green)",
-                    display: "inline-block",
-                    flexShrink: 0,
-                  }} />
-                  X Layer Testnet
-                </div>
-
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  padding: "4px 10px",
-                  borderRadius: "8px",
-                  background: "var(--surface2)",
-                  border: "1px solid var(--border)",
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "var(--text)",
+                  cursor: "pointer",
                   whiteSpace: "nowrap",
-                }}>
-                  <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{formattedBalance}</span>
-                  <span style={{ color: "var(--muted)", fontWeight: 600 }}>OKB</span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => window.open("https://www.okx.com/web3/faucet", "_blank")}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: "6px",
-                    background: "rgba(0,194,120,0.08)",
-                    border: "1px solid rgba(0,194,120,0.2)",
-                    color: "var(--green)",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  🚰 Faucet
-                </button>
-
-                <Link href={`/pundit/${address}`} style={{
+                  width: "100%",
+                  textAlign: "left",
+                }}
+              >
+                🚰 Faucet
+              </button>
+              <Link
+                href={`/pundit/${address}`}
+                onClick={() => setWalletOpen(false)}
+                style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "6px",
@@ -333,65 +571,44 @@ export function Navbar() {
                   border: "1px solid var(--border)",
                   textDecoration: "none",
                   whiteSpace: "nowrap",
+                }}
+              >
+                <div style={{
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "50%",
+                  background: "var(--green)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  color: "#000",
+                  flexShrink: 0,
                 }}>
-                  <div style={{
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "50%",
-                    background: "var(--green)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "9px",
-                    fontWeight: 700,
-                    color: "#000",
-                    flexShrink: 0,
-                  }}>
-                    {address ? address.slice(2, 4).toUpperCase() : ""}
-                  </div>
-                  <span style={{
-                    fontSize: "12px",
-                    fontFamily: "monospace",
-                    color: "var(--green)",
-                    fontWeight: 600,
-                  }}>
-                    {short}
-                  </span>
-                </Link>
-
-                <button onClick={() => disconnect()} onMouseEnter={() => setDisconnectHover(true)} onMouseLeave={() => setDisconnectHover(false)} style={{
-                  padding: 0,
-                  border: "none",
-                  fontSize: "12px",
-                  background: "transparent",
-                  color: disconnectHover ? "var(--red)" : "var(--muted)",
-                  cursor: "pointer",
-                }}>
-                  Disconnect
-                </button>
-              </div>
-            ) : (
-              <button onClick={handleConnect} style={{
-                padding: "7px 18px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: 600,
-                background: "var(--green)",
-                color: "#000",
+                  {address ? address.slice(2, 4).toUpperCase() : ""}
+                </div>
+                <span style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--green)", fontWeight: 600 }}>
+                  {short}
+                </span>
+              </Link>
+              <button onClick={() => disconnect()} onMouseEnter={() => setDisconnectHover(true)} onMouseLeave={() => setDisconnectHover(false)} style={{
+                padding: 0,
                 border: "none",
+                fontSize: "12px",
+                background: "transparent",
+                color: disconnectHover ? "var(--red)" : "var(--muted)",
                 cursor: "pointer",
+                textAlign: "left",
               }}>
-                Connect Wallet
+                Disconnect
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {pathname === "/feed" && (
-          <div style={{
-            overflowX: "auto",
-            scrollbarWidth: "none",
-          }}>
+          <div style={{ overflowX: "auto", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }} className="no-scrollbar">
             <div style={{
               maxWidth: "1200px",
               margin: "0 auto",
@@ -402,7 +619,9 @@ export function Navbar() {
               height: "44px",
               whiteSpace: "nowrap",
               overflowX: "auto",
-            }}>
+              scrollbarWidth: "none",
+              WebkitOverflowScrolling: "touch",
+            }} className="no-scrollbar">
               {CATEGORY_PILLS.map((pill) => {
                 const active = activeCategory === pill.id;
                 return (

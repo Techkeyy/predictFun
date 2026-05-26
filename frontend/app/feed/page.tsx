@@ -47,6 +47,14 @@ function FeedInner() {
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobile(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!publicClient) return;
@@ -106,8 +114,6 @@ function FeedInner() {
   };
 
   const filteredCalls = calls.filter((call) => {
-    const lower = call.claim.toLowerCase();
-
     if (!passesStatus(call)) return false;
 
     if (activeCat === "all") return true;
@@ -115,7 +121,7 @@ function FeedInner() {
     if (activeCat === "settled") return call.settled;
 
     const keywords = CATEGORY_KEYWORDS[activeCat] || [];
-    return keywords.some((keyword) => lower.includes(keyword));
+    return keywords.some((keyword) => call.claim.toLowerCase().includes(keyword));
   });
 
   const totalVolume = calls.reduce((sum, call) => sum + call.stake + call.backerPool + call.faderPool, BigInt(0));
@@ -180,12 +186,11 @@ function FeedInner() {
 
   const shortAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
   const formatOKB = (wei: bigint) => (Number(wei) / 1e18).toFixed(2);
-
   const openTitle = `${openMarkets} open markets`;
 
   if (activeCat === "cards") {
     return (
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "16px" : "32px 24px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "18px", flexWrap: "wrap" }}>
           <div>
             <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--text)", margin: 0 }}>Leaderboard</h1>
@@ -225,61 +230,65 @@ function FeedInner() {
               <span>Accuracy</span>
               <span>OKB Staked</span>
             </div>
-            {leaderboard.map((row, index) => {
-              const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}`;
-              const isEven = index % 2 === 0;
-              const accuracy = Number(row.accuracy);
-              const wins = Number(row.wins);
-              const losses = Number(row.losses);
-              return (
-                <button
-                  key={row.address}
-                  type="button"
-                  onClick={() => router.push(`/pundit/${row.address}`)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    display: "grid",
-                    gridTemplateColumns: "72px 1.5fr 0.8fr 0.8fr 0.9fr 0.9fr",
-                    gap: "12px",
-                    alignItems: "center",
-                    padding: "14px 16px",
-                    border: "none",
-                    background: isEven ? "#111318" : "#0c0f14",
-                    color: "var(--text)",
-                    cursor: "pointer",
-                    borderBottom: index < leaderboard.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                  }}
-                >
-                  <span style={{ fontSize: "16px", fontWeight: 800 }}>{medal}</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                    <span style={{
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "50%",
-                      background: "var(--surface2)",
-                      border: "1px solid var(--border)",
-                      color: "var(--green)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      flexShrink: 0,
-                    }}>
-                      {row.address.slice(2, 4).toUpperCase()}
-                    </span>
-                    <span style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {shortAddress(row.address)}
-                    </span>
-                  </span>
-                  <span style={{ color: "var(--green)", fontWeight: 800 }}>{wins}</span>
-                  <span style={{ color: "var(--muted)", fontWeight: 700 }}>{losses}</span>
-                  <span style={{ color: "var(--text)", fontWeight: 700 }}>{accuracy}%</span>
-                  <span style={{ color: "var(--text)", fontWeight: 700 }}>{formatOKB(row.totalStaked)}</span>
-                </button>
-              );
-            })}
+            <div style={{ overflowX: isMobile ? "auto" : "visible" }} className="no-scrollbar">
+              <div style={{ minWidth: isMobile ? "720px" : "unset" }}>
+                {leaderboard.map((row, index) => {
+                  const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}`;
+                  const isEven = index % 2 === 0;
+                  const accuracy = Number(row.accuracy);
+                  const wins = Number(row.wins);
+                  const losses = Number(row.losses);
+                  return (
+                    <button
+                      key={row.address}
+                      type="button"
+                      onClick={() => router.push(`/pundit/${row.address}`)}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        display: "grid",
+                        gridTemplateColumns: "72px 1.5fr 0.8fr 0.8fr 0.9fr 0.9fr",
+                        gap: "12px",
+                        alignItems: "center",
+                        padding: "14px 16px",
+                        border: "none",
+                        background: isEven ? "var(--surface)" : "var(--surface2)",
+                        color: "var(--text)",
+                        cursor: "pointer",
+                        borderBottom: index < leaderboard.length - 1 ? "1px solid var(--border)" : "none",
+                      }}
+                    >
+                      <span style={{ fontSize: "16px", fontWeight: 800 }}>{medal}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                        <span style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "50%",
+                          background: "var(--surface2)",
+                          border: "1px solid var(--border)",
+                          color: "var(--green)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "11px",
+                          fontWeight: 800,
+                          flexShrink: 0,
+                        }}>
+                          {row.address.slice(2, 4).toUpperCase()}
+                        </span>
+                        <span style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {shortAddress(row.address)}
+                        </span>
+                      </span>
+                      <span style={{ color: "var(--green)", fontWeight: 800 }}>{wins}</span>
+                      <span style={{ color: "var(--muted)", fontWeight: 700 }}>{losses}</span>
+                      <span style={{ color: "var(--text)", fontWeight: 700 }}>{accuracy}%</span>
+                      <span style={{ color: "var(--text)", fontWeight: 700 }}>{formatOKB(row.totalStaked)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -295,15 +304,15 @@ function FeedInner() {
   };
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", gap: "16px", flexWrap: "wrap" }}>
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "16px" : "32px 24px" }}>
+      <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "space-between", marginBottom: "24px", gap: "16px", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 700, color: "var(--text)", margin: 0 }}>Hot Takes</h1>
           <p style={{ fontSize: "14px", color: "var(--muted)", margin: "4px 0 0" }}>
             Back or fade the boldest World Cup predictions on X Layer
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end", flexDirection: isMobile ? "column" : "row" }}>
           <div style={{
             padding: "10px 14px",
             borderRadius: "999px",
@@ -318,6 +327,7 @@ function FeedInner() {
           <Link href="/make-call" style={{
             padding: "10px 20px", borderRadius: "8px", background: "var(--green)",
             color: "#000", fontSize: "14px", fontWeight: 700, textDecoration: "none",
+            textAlign: "center",
           }}>
             + Make a Call
           </Link>
@@ -357,7 +367,7 @@ function FeedInner() {
       ) : (
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(320px, 1fr))",
           gap: "14px",
         }}>
           {filteredCalls.map((call) => (
