@@ -24,6 +24,15 @@ contract TheCall {
     mapping(uint256 => Call) public calls;
     mapping(uint256 => mapping(address => uint256)) public backerStakes;
     mapping(uint256 => mapping(address => uint256)) public faderStakes;
+    // callId => address => amount backed in wei
+    mapping(uint256 => mapping(address => uint256)) public backerAmounts;
+
+    // callId => address => amount faded in wei
+    mapping(uint256 => mapping(address => uint256)) public faderAmounts;
+
+    // track all unique backers and faders per call
+    mapping(uint256 => address[]) public backerList;
+    mapping(uint256 => address[]) public faderList;
     mapping(address => uint256) public claimable;
     mapping(address => bool) public approvedOracles;
     mapping(uint256 => uint256) public settledNetPot;
@@ -88,6 +97,10 @@ contract TheCall {
 
         c.backerPool += msg.value;
         backerStakes[callId][msg.sender] += msg.value;
+        if (backerAmounts[callId][msg.sender] == 0) {
+            backerList[callId].push(msg.sender);
+        }
+        backerAmounts[callId][msg.sender] += msg.value;
 
         emit CallBacked(callId, msg.sender, msg.value);
     }
@@ -101,6 +114,10 @@ contract TheCall {
 
         c.faderPool += msg.value;
         faderStakes[callId][msg.sender] += msg.value;
+        if (faderAmounts[callId][msg.sender] == 0) {
+            faderList[callId].push(msg.sender);
+        }
+        faderAmounts[callId][msg.sender] += msg.value;
 
         emit CallFaded(callId, msg.sender, msg.value);
     }
@@ -233,6 +250,22 @@ contract TheCall {
             c.settled,
             c.callerWon
         );
+    }
+
+    function getBackerAmount(uint256 callId, address user) external view returns (uint256) {
+        return backerAmounts[callId][user];
+    }
+
+    function getFaderAmount(uint256 callId, address user) external view returns (uint256) {
+        return faderAmounts[callId][user];
+    }
+
+    function getBackers(uint256 callId) external view returns (address[] memory) {
+        return backerList[callId];
+    }
+
+    function getFaders(uint256 callId) external view returns (address[] memory) {
+        return faderList[callId];
     }
 
     function updateMinStake(uint256 newMin) external onlyOwner {

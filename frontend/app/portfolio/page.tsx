@@ -19,17 +19,20 @@ interface CallData {
   callerWon: boolean;
 }
 
-type PositionRole = "Called it";
+type PositionRole = "Called it" | "Backed" | "Faded";
 
 interface PositionRow {
   callId: number;
   claim: string;
   role: PositionRole;
+  amount: bigint;
   stake: bigint;
+  backerPool: bigint;
+  faderPool: bigint;
+  totalPool: bigint;
   settled: boolean;
   callerWon: boolean;
   deadline: bigint;
-  backerPool: bigint;
 }
 
 interface SummaryMetrics {
@@ -48,8 +51,10 @@ export default function PortfolioPage() {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [positions, setPositions] = useState<PositionRow[]>([]);
   const [activeTab, setActiveTab] = useState<"positions" | "backing" | "fading">("positions");
+  const [callerPositions, setCallerPositions] = useState<PositionRow[]>([]);
+  const [backingPositions, setBackingPositions] = useState<PositionRow[]>([]);
+  const [fadingPositions, setFadingPositions] = useState<PositionRow[]>([]);
   const [metrics, setMetrics] = useState<SummaryMetrics>({
     activeStake: BigInt(0),
     availableToClaim: BigInt(0),
@@ -68,7 +73,28 @@ export default function PortfolioPage() {
 
   const formatOKB = (value: bigint) => formatEther(value);
 
-  const isWin = (position: PositionRow) => position.callerWon;
+  const getCallStatus = (settled: boolean, callerWon: boolean, deadline: bigint) => {
+    const now = Math.floor(Date.now() / 1000);
+    const isExpired = !settled && Number(deadline) < now;
+    if (settled) return callerWon ? "SETTLED WON" : "SETTLED LOST";
+    return isExpired ? "EXPIRED" : "OPEN";
+  };
+
+  const getStatusStyles = (settled: boolean, callerWon: boolean, deadline: bigint) => {
+    const now = Math.floor(Date.now() / 1000);
+    const isExpired = !settled && Number(deadline) < now;
+    if (settled) {
+      return {
+        color: callerWon ? "var(--green)" : "var(--red)",
+        background: callerWon ? "var(--green-dim)" : "var(--red-dim)",
+      };
+    }
+
+    return {
+      color: isExpired ? "var(--muted)" : "var(--green)",
+      background: isExpired ? "var(--surface2)" : "rgba(0,194,120,0.08)",
+    };
+  };
 
   const loadPortfolio = useCallback(async () => {
     if (!publicClient || !address) return;
@@ -82,29 +108,97 @@ export default function PortfolioPage() {
         functionName: "callCount",
       });
       const callCount = Number(callCountRaw);
-      const callerAddress = address.toLowerCase();
+      const connectedAddress = address.toLowerCase();
+
+      const nextCallerPositions: PositionRow[] = [];
+      const nextBackingPositions: PositionRow[] = [];
+      const nextFadingPositions: PositionRow[] = [];
       const callerCalls: CallData[] = [];
 
       for (let index = 1; index <= callCount; index++) {
         try {
-          const call = await publicClient.readContract({
+          const callData = await publicClient.readContract({
             address: THECALL_ADDRESS as `0x${string}`,
             abi: THECALL_ABI,
             functionName: "getCall",
             args: [BigInt(index)],
           }) as [string, string, bigint, bigint, bigint, bigint, boolean, boolean];
 
-          if (call[0].toLowerCase() === callerAddress) {
-            callerCalls.push({
-              id: index,
-              caller: call[0],
-              claim: call[1],
-              stake: call[2],
-              backerPool: call[3],
-              faderPool: call[4],
-              deadline: call[5],
-              settled: call[6],
-              callerWon: call[7],
+          const backedAmount = await publicClient.readContract({
+            address: THECALL_ADDRESS as `0x${string}`,
+            abi: THECALL_ABI,
+            functionName: "getBackerAmount",
+            args: [BigInt(index), address as `0x${string}`],
+          }) as bigint;
+
+          const fadedAmount = await publicClient.readContract({
+            address: THECALL_ADDRESS as `0x${string}`,
+            abi: THECALL_ABI,
+            functionName: "getFaderAmount",
+            args: [BigInt(index), address as `0x${string}`],
+          }) as bigint;
+
+          const call: CallData = {
+            id: index,
+            caller: callData[0],
+            claim: callData[1],
+            stake: callData[2],
+            backerPool: callData[3],
+            faderPool: callData[4],
+            deadline: callData[5],
+            settled: callData[6],
+            callerWon: callData[7],
+          };
+
+          const totalPool = call.stake + call.backerPool + call.faderPool;
+          const isCaller = call.caller.toLowerCase() === connectedAddress;
+
+          if (isCaller) {
+            callerCalls.push(call);
+            nextCallerPositions.push({
+              callId: call.id,
+              claim: call.claim,
+              role: "Called it",
+              amount: call.stake,
+              stake: call.stake,
+              backerPool: call.backerPool,
+              faderPool: call.faderPool,
+              totalPool,
+              settled: call.settled,
+              callerWon: call.callerWon,
+              deadline: call.deadline,
+            });
+          }
+
+          if (backedAmount > BigInt(0)) {
+            nextBackingPositions.push({
+              callId: call.id,
+              claim: call.claim,
+              role: "Backed",
+              amount: backedAmount,
+              stake: call.stake,
+              backerPool: call.backerPool,
+              faderPool: call.faderPool,
+              totalPool,
+              settled: call.settled,
+              callerWon: call.callerWon,
+              deadline: call.deadline,
+            });
+          }
+
+          if (fadedAmount > BigInt(0)) {
+            nextFadingPositions.push({
+              callId: call.id,
+              claim: call.claim,
+              role: "Faded",
+              amount: fadedAmount,
+              stake: call.stake,
+              backerPool: call.backerPool,
+              faderPool: call.faderPool,
+              totalPool,
+              settled: call.settled,
+              callerWon: call.callerWon,
+              deadline: call.deadline,
             });
           }
         } catch (error) {
@@ -112,43 +206,41 @@ export default function PortfolioPage() {
         }
       }
 
-      const orderedCalls = callerCalls.reverse();
-      const nextPositions = orderedCalls.map((call) => ({
-        callId: call.id,
-        claim: call.claim,
-        role: "Called it" as const,
-        stake: call.stake,
-        settled: call.settled,
-        callerWon: call.callerWon,
-        deadline: call.deadline,
-        backerPool: call.backerPool,
-      }));
+      nextCallerPositions.reverse();
+      nextBackingPositions.reverse();
+      nextFadingPositions.reverse();
 
-      const activeStake = orderedCalls
-        .filter((call) => !call.settled)
-        .reduce((sum, call) => sum + call.stake, BigInt(0));
+      const activeStake = [
+        ...nextCallerPositions,
+        ...nextBackingPositions,
+        ...nextFadingPositions,
+      ]
+        .filter((position) => !position.settled)
+        .reduce((sum, position) => sum + position.amount, BigInt(0));
 
-      const availableToClaim = orderedCalls
-        .filter((call) => call.settled && call.callerWon)
-        .reduce((sum, call) => sum + call.stake + call.backerPool, BigInt(0));
+      const availableToClaim = nextCallerPositions
+        .filter((position) => position.settled && position.callerWon)
+        .reduce((sum, position) => sum + position.stake + position.backerPool, BigInt(0));
 
-      const settledWins = orderedCalls
-        .filter((call) => call.settled && call.callerWon)
-        .reduce((sum, call) => sum + call.stake, BigInt(0));
+      const settledWins = nextCallerPositions
+        .filter((position) => position.settled && position.callerWon)
+        .reduce((sum, position) => sum + position.stake, BigInt(0));
 
-      const settledLosses = orderedCalls
-        .filter((call) => call.settled && !call.callerWon)
-        .reduce((sum, call) => sum + call.stake, BigInt(0));
+      const settledLosses = nextCallerPositions
+        .filter((position) => position.settled && !position.callerWon)
+        .reduce((sum, position) => sum + position.stake, BigInt(0));
 
-      const settledCount = orderedCalls.filter((call) => call.settled).length;
-      const wonCount = orderedCalls.filter((call) => call.settled && call.callerWon).length;
+      const settledCount = nextCallerPositions.filter((position) => position.settled).length;
+      const wonCount = nextCallerPositions.filter((position) => position.settled && position.callerWon).length;
       const winRate = settledCount > 0 ? Math.round((wonCount / settledCount) * 100) : 0;
-      const latestDeadline = orderedCalls.reduce((latest, call) => {
+      const latestDeadline = callerCalls.reduce((latest, call) => {
         const deadlineMs = Number(call.deadline) * 1000;
         return deadlineMs > latest ? deadlineMs : latest;
       }, 0);
 
-      setPositions(nextPositions);
+      setCallerPositions(nextCallerPositions);
+      setBackingPositions(nextBackingPositions);
+      setFadingPositions(nextFadingPositions);
       setMetrics({
         activeStake,
         availableToClaim,
@@ -159,7 +251,9 @@ export default function PortfolioPage() {
       });
     } catch (error) {
       console.error("Failed to load portfolio:", error);
-      setPositions([]);
+      setCallerPositions([]);
+      setBackingPositions([]);
+      setFadingPositions([]);
       setMetrics({
         activeStake: BigInt(0),
         availableToClaim: BigInt(0),
@@ -168,9 +262,9 @@ export default function PortfolioPage() {
         lastActivity: "No activity yet",
         settledCount: 0,
       });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [address, publicClient]);
 
   useEffect(() => {
@@ -179,9 +273,10 @@ export default function PortfolioPage() {
   }, [publicClient, address, loadPortfolio]);
 
   const visiblePositions = useMemo(() => {
-    if (activeTab === "positions") return positions;
-    return [];
-  }, [activeTab, positions]);
+    if (activeTab === "positions") return callerPositions;
+    if (activeTab === "backing") return backingPositions;
+    return fadingPositions;
+  }, [activeTab, callerPositions, backingPositions, fadingPositions]);
 
   const lossRate = metrics.settledCount > 0 ? 100 - metrics.winRate : 0;
   const profitLossIsPositive = metrics.netOKB >= BigInt(0);
@@ -197,10 +292,24 @@ export default function PortfolioPage() {
     cursor: "pointer",
   });
 
+  const estimatePayout = (position: PositionRow) => {
+    if (position.role === "Called it") {
+      return position.callerWon ? position.stake + position.backerPool : position.stake;
+    }
+
+    if (position.role === "Backed") {
+      if (position.backerPool === BigInt(0)) return BigInt(0);
+      return (position.amount * position.totalPool) / position.backerPool;
+    }
+
+    if (position.faderPool === BigInt(0)) return BigInt(0);
+    return (position.amount * position.totalPool) / position.faderPool;
+  };
+
   const renderEmptyTab = (tab: "backing" | "fading") => {
     const copy = tab === "backing"
-      ? "Backing history coming soon. Back a call on the Feed to get started."
-      : "Fading history coming soon. Fade a call on the Feed to get started.";
+      ? "No backing positions yet. Back a call on the Feed to get started."
+      : "No fading positions yet. Fade a call on the Feed to get started.";
 
     return (
       <div style={{
@@ -231,6 +340,66 @@ export default function PortfolioPage() {
       </div>
     );
   };
+
+  const renderTable = (positions: PositionRow[]) => (
+    <div style={{ border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden", background: "var(--surface)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 0.9fr 0.8fr 0.9fr 0.9fr", gap: "12px", padding: "12px 16px", background: "var(--surface2)", color: "var(--muted)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+        <span>MARKET</span>
+        <span>SIDE</span>
+        <span>STAKED</span>
+        <span>STATUS</span>
+        <span>TO WIN</span>
+      </div>
+      <div style={{ overflowX: isMobile ? "auto" : "visible" }} className="no-scrollbar">
+        <div style={{ minWidth: isMobile ? "760px" : "unset" }}>
+          {positions.map((position, index) => {
+            const rowBg = index % 2 === 0 ? "var(--surface)" : "var(--surface2)";
+            const statusLabel = getCallStatus(position.settled, position.callerWon, position.deadline);
+            const statusStyles = getStatusStyles(position.settled, position.callerWon, position.deadline);
+            const sideColor = position.role === "Faded" ? "var(--red)" : position.role === "Backed" ? "var(--green)" : "var(--text)";
+            const sideLabel = position.role;
+            const payout = estimatePayout(position);
+
+            return (
+              <div key={`${position.callId}-${position.role}-${index}`} style={{
+                display: "grid",
+                gridTemplateColumns: "2fr 0.9fr 0.8fr 0.9fr 0.9fr",
+                gap: "12px",
+                alignItems: "center",
+                padding: "14px 16px",
+                background: rowBg,
+                borderBottom: "1px solid var(--border)",
+              }}>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
+                  {position.claim.length > 40 ? `${position.claim.slice(0, 40)}...` : position.claim}
+                </span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: sideColor }}>
+                  {sideLabel}
+                </span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>
+                  {formatOKB(position.amount)}
+                </span>
+                <span style={{
+                  flexShrink: 0,
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: "4px",
+                  background: statusStyles.background,
+                  color: statusStyles.color,
+                }}>
+                  {statusLabel}
+                </span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>
+                  {payout > BigInt(0) ? `~${formatOKB(payout)} OKB` : "—"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 
   if (!isConnected || !address) {
     return (
@@ -392,8 +561,8 @@ export default function PortfolioPage() {
             }} />
           ))}
         </div>
-      ) : activeTab === "positions" ? (
-        visiblePositions.length === 0 ? (
+      ) : visiblePositions.length === 0 ? (
+        activeTab === "positions" ? (
           <div style={{
             padding: "40px",
             textAlign: "center",
@@ -404,72 +573,9 @@ export default function PortfolioPage() {
           }}>
             No positions found.
           </div>
-        ) : (
-          <div style={{ border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden", background: "var(--surface)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 0.9fr 0.8fr 0.9fr 0.9fr", gap: "12px", padding: "12px 16px", background: "var(--surface2)", color: "var(--muted)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              <span>MARKET</span>
-              <span>SIDE</span>
-              <span>STAKED</span>
-              <span>STATUS</span>
-              <span>TO WIN</span>
-            </div>
-            <div style={{ overflowX: isMobile ? "auto" : "visible" }} className="no-scrollbar">
-              <div style={{ minWidth: isMobile ? "760px" : "unset" }}>
-                {visiblePositions.map((position, index) => {
-                  const rowBg = index % 2 === 0 ? "var(--surface)" : "var(--surface2)";
-                  const now = Math.floor(Date.now() / 1000);
-                  const expired = !position.settled && Number(position.deadline) < now;
-                  const won = position.settled && isWin(position);
-                  const statusLabel = position.settled ? (won ? "SETTLED WON" : "SETTLED LOST") : expired ? "EXPIRED" : "OPEN";
-                  const statusStyles = {
-                    color: position.settled ? (won ? "var(--green)" : "var(--red)") : expired ? "var(--muted)" : "var(--green)",
-                    background: position.settled ? (won ? "var(--green-dim)" : "var(--red-dim)") : expired ? "var(--surface2)" : "rgba(0,194,120,0.08)",
-                  };
-                  const payout = position.settled && position.callerWon ? position.stake + position.backerPool : position.stake;
-                  return (
-                    <div key={`${position.callId}-${position.role}-${index}`} style={{
-                      display: "grid",
-                      gridTemplateColumns: "2fr 0.9fr 0.8fr 0.9fr 0.9fr",
-                      gap: "12px",
-                      alignItems: "center",
-                      padding: "14px 16px",
-                      background: rowBg,
-                      borderBottom: "1px solid var(--border)",
-                    }}>
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
-                        {position.claim.length > 40 ? `${position.claim.slice(0, 40)}...` : position.claim}
-                      </span>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--green)" }}>
-                        {position.role}
-                      </span>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>
-                        {formatOKB(position.stake)}
-                      </span>
-                      <span style={{
-                        flexShrink: 0,
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        padding: "3px 10px",
-                        borderRadius: "4px",
-                        background: statusStyles.background,
-                        color: statusStyles.color,
-                      }}>
-                        {statusLabel}
-                      </span>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)" }}>
-                        ~{formatOKB(payout)} OKB
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )
-      ) : activeTab === "backing" ? (
-        renderEmptyTab("backing")
+        ) : activeTab === "backing" ? renderEmptyTab("backing") : renderEmptyTab("fading")
       ) : (
-        renderEmptyTab("fading")
+        renderTable(visiblePositions)
       )}
     </div>
   );

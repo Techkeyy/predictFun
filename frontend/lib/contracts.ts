@@ -1,7 +1,7 @@
 import { type Abi } from "viem";
 
-export const THECALL_ADDRESS = process.env.NEXT_PUBLIC_THECALL_ADDRESS as string;
-export const PUNDITCARD_ADDRESS = process.env.NEXT_PUBLIC_PUNDITCARD_ADDRESS as string;
+export const THECALL_ADDRESS = "0x58696fAc56e3d16794e07b19B03111C10d4ebce5";
+export const PUNDITCARD_ADDRESS = "0x45341a0B1b1748E5E6f63643898179cC1E9E6395";
 
 export const THECALL_ABI = [
   {
@@ -67,6 +67,40 @@ export const THECALL_ABI = [
       { name: "settled", type: "bool" },
       { name: "callerWon", type: "bool" },
     ],
+  },
+  {
+    name: "getBackerAmount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "callId", type: "uint256" },
+      { name: "user", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "getFaderAmount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "callId", type: "uint256" },
+      { name: "user", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "getBackers",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "callId", type: "uint256" }],
+    outputs: [{ name: "", type: "address[]" }],
+  },
+  {
+    name: "getFaders",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "callId", type: "uint256" }],
+    outputs: [{ name: "", type: "address[]" }],
   },
   {
     type: "function",
