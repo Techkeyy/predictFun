@@ -1,121 +1,187 @@
-# PredictFun
+# PredictFun — Onchain Conviction Market for World Cup 2026
 
-**Onchain conviction market for World Cup 2026, built on X Layer.**
+> **Back it or fade it. Winner takes the pot.**  
+> Built on X Layer · Powered by OKB · Submitted to X Cup Hackathon 2026
 
-Make bold football predictions. Stake OKB. Let the world back or fade you. Win money. Build your reputation as the sharpest pundit on X Layer.
+🌐 **Live App**: https://predict-fun-five.vercel.app  
+📦 **Repo**: https://github.com/Techkeyy/predictFun  
+🔗 **Network**: X Layer Testnet (Chain ID: 1952)
 
 ---
 
 ## What is PredictFun?
 
-PredictFun is a decentralised prediction market where users make public calls — bold predictions about World Cup 2026 outcomes — and stake OKB on them. Other users can **back** (agree) or **fade** (disagree) each call. After the match, the oracle settles the result onchain and winners claim their share of the pot.
+PredictFun is a social conviction market where users stake OKB on bold World Cup 2026 predictions — called **Calls**. Anyone can **Back** (agree) or **Fade** (disagree) any call. When the match result is known, the winning side splits the entire pool.
 
-No house edge. Pure conviction versus conviction.
+Every pundit builds an onchain reputation tracked by a downloadable **PunditCard** NFT — showing wins, losses, accuracy, and OKB staked.
 
 ---
 
-## Tech Stack
+## How It Works
 
-- **Blockchain:** X Layer (OKB L2 by OKX)
-- **Smart Contracts:** Solidity 0.8.24, Hardhat
-- **Frontend:** Next.js 14, wagmi v2, viem, TypeScript, Tailwind CSS
-- **AI Validation:** DeepSeek API (validates calls before submission)
-- **Oracle:** Trusted multi-sig (V1), Chainlink/API3 on roadmap
+1. **Make a Call** — Stake OKB on a World Cup prediction. AI validates your claim before it goes onchain.
+2. **Back it** — Agree with the caller. Add OKB to the backing pool.
+3. **Fade it** — Disagree. Add OKB to the fading pool.
+4. **Settlement** — After the match, admin calls `settle(callId, callerWon)`. Winners split the full pool proportionally.
+5. **Reputation** — Every settled call updates your PunditCard stats onchain.
 
 ---
 
 ## Contracts (X Layer Testnet)
 
 | Contract | Address |
-|----------|---------|
+|---|---|
 | TheCall.sol | `0x29E7e49b908E36bF16Ad51E5B7C9195B0792370D` |
-| PunditCard.sol | `0xfB1F0a8CED01F2352343cea4Bbc70beB225E8493` |
+| PunditCard.sol | `0xfB1F0a8CED01f2352343cea4Bbc70beB225E8493` |
 
-Chain ID: `1952` · RPC: `https://testrpc.xlayer.tech/terigon`
+**Deployer**: `0x7fc04ed9B67340b80aE6Bd16E62d32BEA70EBeea`  
+**Explorer**: https://www.okx.com/web3/explorer/xlayer-test
 
 ---
 
-## Local Development
+## Seeded Markets
+
+| # | Prediction | Deadline |
+|---|---|---|
+| 1 | Argentina will win the 2026 FIFA World Cup | July 19, 2026 |
+| 2 | Kylian Mbappe will win the Golden Boot | July 19, 2026 |
+| 3 | The 2026 World Cup final will be between Brazil and France | July 19, 2026 |
+| 4 | At least one African team will reach the semi-finals | July 9, 2026 |
+| 5 | England will be eliminated before the quarter-finals | July 4, 2026 |
+| 6 | The tournament top scorer will score more than 8 goals | July 19, 2026 |
+
+---
+
+## Features
+
+- ⚽ **Live prediction feed** — Polymarket-style cards with Back/Fade pools
+- 🤖 **AI validation** — DeepSeek API validates calls against 48 qualified teams and real World Cup facts before submission
+- 🏅 **Leaderboard** — Ranked pundit table by wins, accuracy, and OKB staked
+- 👤 **PunditCard** — Onchain reputation card, downloadable as PNG
+- 💼 **Portfolio** — Track your positions, backings, and fadings in one dashboard
+- 🌓 **Dark/Light mode** — Full theme support
+- 📱 **Mobile responsive** — Works on all screen sizes
+- 🔗 **Network guard** — Auto-detects wrong network, prompts switch to X Layer Testnet
+- 🚰 **Faucet link** — One-click access to OKB testnet faucet
+
+---
+
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Smart Contracts | Solidity, Hardhat |
+| Frontend | Next.js 14, TypeScript, wagmi v2, viem |
+| Wallet | MetaMask / any injected provider |
+| AI Validation | DeepSeek API |
+| Network | X Layer Testnet (Chain ID 1952, OKB gas) |
+| Deployment | Vercel |
+
+---
+
+## Local Setup
 
 ### Prerequisites
-- Node.js >= 18
-- MetaMask with X Layer Testnet configured
+- Node.js 18+
+- MetaMask with X Layer Testnet added
+- OKB testnet tokens from https://web3.okx.com/xlayer/faucet
 
-### Setup
+### Install & Run
 
 ```bash
-# Clone the repo
+# Clone
 git clone https://github.com/Techkeyy/predictFun.git
 cd predictFun
 
-# Install root dependencies (Hardhat)
+# Install contract dependencies
 npm install
 
 # Install frontend dependencies
 cd frontend
 npm install
 
-# Copy env template and fill in values
+# Set environment variables
 cp .env.example .env.local
+# Fill in: NEXT_PUBLIC_THECALL_ADDRESS, NEXT_PUBLIC_PUNDITCARD_ADDRESS, DEEPSEEK_API_KEY
+
+# Run dev server
+npm run dev
 ```
 
-### Environment Variables
+Open http://localhost:3000
 
-Create `frontend/.env.local`:
-NEXT_PUBLIC_THECALL_ADDRESS=0x29E7e49b908E36bF16Ad51E5B7C9195B0792370D
-NEXT_PUBLIC_PUNDITCARD_ADDRESS=0xfB1F0a8CED01F2352343cea4Bbc70beB225E8493
-NEXT_PUBLIC_CHAIN_ID=1952
-NEXT_PUBLIC_RPC_URL=https://testrpc.xlayer.tech/terigon
-NEXT_PUBLIC_DEEPSEEK_API_KEY=your_deepseek_key_here
-
-### Run Frontend
+### Deploy Contracts
 
 ```bash
-cd frontend
-npx next dev
-```
+# From project root
+cp .env.example .env
+# Fill in PRIVATE_KEY
 
-Open [http://localhost:3000](http://localhost:3000)
-
----
-
-## Smart Contract Commands
-
-```bash
-# Compile contracts
-npm run compile
-
-# Deploy to X Layer Testnet
-npm run deploy:testnet
-
-# Seed official markets
+npx hardhat compile
+npx hardhat run scripts/deploy.js --network xlayer_testnet
 npx hardhat run scripts/seedMarkets.js --network xlayer_testnet
 ```
 
 ---
 
-## How It Works
+## X Layer Testnet Config
 
-1. **Make a Call** — Write your prediction (validated by DeepSeek AI), select a match, stake OKB minimum 0.01
-2. **Back or Fade** — Others stake OKB to agree or disagree
-3. **Settlement** — Oracle posts result onchain after match ends
-4. **Claim** — Winners pull their proportional share of the pot
+| Field | Value |
+|---|---|
+| Network Name | X Layer Testnet |
+| RPC URL | https://testrpc.xlayer.tech/terigon |
+| Chain ID | 1952 |
+| Symbol | OKB |
+| Explorer | https://www.okx.com/web3/explorer/xlayer-test |
 
 ---
 
 ## Project Structure
+
+```
 predictfun/
 ├── contracts/
-│   ├── TheCall.sol        # Core betting contract
-│   └── PunditCard.sol     # Soulbound reputation NFT
+│   ├── TheCall.sol          # Core betting contract
+│   └── PunditCard.sol       # Soulbound reputation NFT
 ├── scripts/
-│   ├── deploy.js          # Deploy both contracts
-│   └── seedMarkets.js     # Seed official markets
-├── frontend/
-│   ├── app/               # Next.js app router pages
-│   ├── components/        # Navbar, CallCard
-│   └── lib/               # Contracts ABI, wagmi config, validation
-└── hardhat.config.js
+│   ├── deploy.js
+│   └── seedMarkets.js
+├── hardhat.config.js
+└── frontend/
+	├── app/
+	│   ├── page.tsx          # Homepage
+	│   ├── feed/             # Market feed
+	│   ├── make-call/        # Submit a prediction
+	│   ├── portfolio/        # User positions dashboard
+	│   ├── pundit/[address]/ # Pundit card page
+	│   ├── admin/            # Settlement interface
+	│   └── docs/             # How it works
+	├── components/
+	│   ├── Navbar.tsx
+	│   ├── CallCard.tsx
+	│   └── NetworkModal.tsx
+	└── lib/
+		├── contracts.ts      # ABIs + addresses
+		├── wagmi.ts
+		├── switchNetwork.ts
+		└── validateClaim.ts  # AI validation
+```
+
+---
+
+## Hackathon Submission
+
+- **Event**: X Cup Hackathon by OKX / X Layer
+- **Track**: Prediction Markets
+- **Prize Pool**: 14,000 USDT
+- **Deadline**: May 28, 2026 23:59 UTC
+- **Submission**: Google Form
+
+---
+
+## License
+
+MIT
 
 ---
 

@@ -186,7 +186,7 @@ export default function PunditPage() {
         overflow: "hidden",
       }}>
         <div style={{
-          background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+          background: "linear-gradient(135deg, #00c278 0%, #00956b 100%)",
           padding: isMobile ? "24px 18px" : "32px 28px",
           position: "relative",
         }}>
@@ -201,15 +201,15 @@ export default function PunditPage() {
               justifyContent: "center",
               fontSize: "22px",
               fontWeight: 800,
-              color: "#ffffff",
+              color: "#000000",
               border: "3px solid rgba(255,255,255,0.3)",
               flexShrink: 0,
             }}>
               {rawAddress ? rawAddress.slice(2, 4).toUpperCase() : "?"}
             </div>
             <div>
-              <div style={{ fontSize: isMobile ? "18px" : "20px", fontWeight: 700, color: "#ffffff" }}>{rank}</div>
-              <div style={{ fontSize: "13px", fontFamily: "monospace", color: "rgba(255,255,255,0.8)", marginTop: "4px" }}>
+              <div style={{ fontSize: isMobile ? "18px" : "20px", fontWeight: 700, color: "#000000" }}>{rank}</div>
+              <div style={{ fontSize: "13px", fontFamily: "monospace", color: "rgba(0,0,0,0.8)", marginTop: "4px" }}>
                 {displayAddress}
               </div>
               {!hasProfile && totalCalls === 0 && (
@@ -217,7 +217,7 @@ export default function PunditPage() {
                   marginTop: "6px",
                   fontSize: "11px",
                   fontWeight: 600,
-                  color: "rgba(255,255,255,0.8)",
+                    color: "rgba(0,0,0,0.8)",
                   background: "rgba(255,255,255,0.15)",
                   padding: "2px 8px",
                   borderRadius: "4px",
@@ -235,7 +235,7 @@ export default function PunditPage() {
             fontSize: "10px",
             fontWeight: 700,
             letterSpacing: "0.08em",
-            color: "rgba(255,255,255,0.8)",
+            color: "rgba(0,0,0,0.8)",
           }}>
             PREDICTFUN - X LAYER
           </div>

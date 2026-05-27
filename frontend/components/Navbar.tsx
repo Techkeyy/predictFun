@@ -155,8 +155,8 @@ export function Navbar() {
       gap: "6px",
       padding: "4px 10px",
       borderRadius: "6px",
-      background: "rgba(59,130,246,0.08)",
-      border: `1px solid ${networkHover ? "rgba(59,130,246,0.25)" : "rgba(59,130,246,0.2)"}`,
+      background: "rgba(0,194,120,0.08)",
+      border: `1px solid ${networkHover ? "rgba(0,194,120,0.25)" : "rgba(0,194,120,0.2)"}`,
       fontSize: "11px",
       fontWeight: 600,
       color: "var(--green)",
@@ -171,8 +171,8 @@ export function Navbar() {
   );
 
   const tickerBarStyle = {
-    background: "#3b82f6",
-    color: "#ffffff",
+    background: "#00c278",
+    color: "#000000",
     fontSize: "10px",
     fontWeight: 700,
     letterSpacing: "0.08em",
@@ -239,7 +239,7 @@ export function Navbar() {
                 background: "var(--green-dim)",
                 color: "var(--green)",
                 letterSpacing: "0.06em",
-                border: "1px solid rgba(59,130,246,0.2)",
+                border: "1px solid rgba(0,194,120,0.2)",
               }}>
                 X LAYER
               </span>
@@ -351,8 +351,8 @@ export function Navbar() {
                     style={{
                       padding: "4px 10px",
                       borderRadius: "6px",
-                      background: "rgba(59,130,246,0.08)",
-                      border: "1px solid rgba(59,130,246,0.2)",
+                      background: "rgba(0,194,120,0.08)",
+                      border: "1px solid rgba(0,194,120,0.2)",
                       color: "var(--green)",
                       fontSize: "12px",
                       fontWeight: 600,
@@ -506,8 +506,8 @@ export function Navbar() {
                     style={{
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      background: "rgba(59,130,246,0.08)",
-                      border: "1px solid rgba(59,130,246,0.2)",
+                      background: "rgba(0,194,120,0.08)",
+                      border: "1px solid rgba(0,194,120,0.2)",
                       color: "var(--green)",
                       fontSize: "13px",
                       fontWeight: 700,
