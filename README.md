@@ -4,7 +4,7 @@
 
 Back or fade bold football predictions with OKB. Winner takes the pool. Every pundit builds an onchain reputation.
 
-🌐 [predict-fun-five.vercel.app](https://predict-fun-five.vercel.app) · 📦 [GitHub](https://github.com/Techkeyy/predictFun) · ⛓ X Layer Testnet
+🌐 [predict-fun-five.vercel.app](https://predict-fun-five.vercel.app) ·  ⛓ X Layer Testnet
 
 ---
 
